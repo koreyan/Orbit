@@ -32,4 +32,8 @@
 - **요소**: 우주 유리판(Glassmorphism), 반짝이는 별 배경 애니메이션, 유성 효과
 - **포인트 컬러**: Cosmic Orange (#FF6B35), Warm Amber (#FFAB40), Gold Glow (#FFD700)
 - **폰트**: 가독성 좋은 Sans-serif 계열 (Pretendard) + 서비스명 포인트 폰트
-    
+
+## 5. 프로젝트 환경 (Project Environment)
+
+- **GitHub Repository**: [https://github.com/koreyan/Orbit](https://github.com/koreyan/Orbit)
+- **Vercel Production URL**: [https://orbit-six-gamma.vercel.app](https://orbit-six-gamma.vercel.app)
