@@ -37,3 +37,35 @@
 
 - **GitHub Repository**: [https://github.com/koreyan/Orbit](https://github.com/koreyan/Orbit)
 - **Vercel Production URL**: [https://orbit-six-gamma.vercel.app](https://orbit-six-gamma.vercel.app)
+
+## 6. 유저 플로우 (User flow)
+
+1. **랜딩 페이지 (Landing Page)**
+   - 서비스 소개 및 핵심 가치 전달 (우주/별자리 컨셉의 인터랙티브 UI)
+   - '내 별자리 분석하기' (Call to Action) 버튼 배치
+
+2. **온보딩 및 정보 입력 (Onboarding & Input)**
+   - 이름, 생년월일, 태어난 시간, 성별 등 명리학(자미두수) 분석에 필요한 기본 정보 입력
+   - 직관적이고 부드러운 스텝바이스텝(Step-by-step) UI 제공
+
+3. **분석 중 (Loading & Analysis)**
+   - Gemini AI 및 자미두수 알고리즘을 활용한 데이터 분석 진행
+   - 우주적 컨셉을 살린 로딩 애니메이션으로 유저 이탈 방지
+
+4. **메인 대시보드 (Main Dashboard / Report)**
+   - 유저의 고유한 성향과 운세 흐름을 시각화된 차트/그래프로 요약 제공
+   - **주요 카테고리 메뉴**:
+     - 🌟 **Core Identity**: 기본 성향, 매력, 장단점 분석
+     - 💼 **Career & Potential**: 잠재력 기반 진로 및 직업 추천
+     - ❤️ **Relationship**: 매력 자산 기반 연애/대인관계 가이드
+     - 🧘 **Wellness**: 성향 맞춤형 취미 및 여가 제안
+     - 📅 **Life Planning**: 시기별(월/년) 운세 흐름 및 액션 플랜
+
+5. **상세 분석 및 프리미엄 리포트 (Detail & Premium)**
+   - 각 카테고리별 심층 분석 리포트 제공
+   - 특정 심층 리포트 열람 시 결제 유도 (Toss Payments 연동)
+
+6. **마이페이지 (My Page)**
+   - 지난 분석 결과 다시보기 (저장된 리포트)
+   - 결제 내역 및 구독 관리
+   - 개인정보(생년월일 등) 수정
