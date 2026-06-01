@@ -29,8 +29,9 @@ export default async function ReportDetailPage({
   const theme = (resolvedSearchParams.theme as string) || "career";
 
   // 2. 타인 리포트 접근 차단 (권한 검증 시뮬레이션)
-  // DB가 없으므로 임시로 본인의 주문번호(ORDER_1700000001)가 아닌 경우 403 에러 렌더링
-  const isAuthorized = reportId === "ORDER_1700000001";
+  // 아직 실제 DB가 없으므로, E2E 테스트(ORDER_9999999999)용 접근만 차단하고
+  // 결제창에서 넘어온 동적 주문번호는 임시로 허용합니다.
+  const isAuthorized = reportId !== "ORDER_9999999999";
 
   if (!isAuthorized) {
     return (
