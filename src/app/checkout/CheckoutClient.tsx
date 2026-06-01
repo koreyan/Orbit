@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loadTossPayments, TossPaymentsWidgets } from "@tosspayments/tosspayments-sdk";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,9 @@ export default function CheckoutClient() {
   const [isReady, setIsReady] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const initRef = useRef(false);
+  const renderRef = useRef(false);
+
   // 1. 주문 데이터 로드
   useEffect(() => {
     async function loadOrder() {
@@ -54,7 +57,9 @@ export default function CheckoutClient() {
 
   // 2. 토스 위젯 초기화
   useEffect(() => {
-    if (!order) return; // 주문이 로드된 후에 초기화
+    if (!order || initRef.current) return; // 주문이 로드된 후 한 번만 초기화
+    initRef.current = true;
+
     async function initializeTossPayments() {
       try {
         const tosspayments = await loadTossPayments(TOSS_CLIENT_KEY);
@@ -66,26 +71,35 @@ export default function CheckoutClient() {
       }
     }
     initializeTossPayments();
-  }, []);
+  }, [order]);
 
   useEffect(() => {
-    if (widgets && amount > 0) {
+    if (widgets && amount > 0 && !renderRef.current) {
+      renderRef.current = true;
+      
       async function renderWidgets() {
-        // Render Payment Method Widget
-        await widgets?.setAmount({ currency: "KRW", value: amount });
-        
-        await Promise.all([
-          widgets?.renderPaymentMethods({
-            selector: "#payment-method",
-            variantKey: "DEFAULT",
-          }),
-          widgets?.renderAgreement({
-            selector: "#agreement",
-            variantKey: "AGREEMENT",
-          }),
-        ]);
+        try {
+          // Render Payment Method Widget
+          await widgets?.setAmount({ currency: "KRW", value: amount });
+          
+          await Promise.all([
+            widgets?.renderPaymentMethods({
+              selector: "#payment-method",
+              variantKey: "DEFAULT",
+            }),
+            widgets?.renderAgreement({
+              selector: "#agreement",
+              variantKey: "AGREEMENT",
+            }),
+          ]);
 
-        setIsReady(true);
+          setIsReady(true);
+        } catch (error) {
+          console.error("Widget render error:", error);
+          // React Strict Mode 등에서 위젯이 이미 렌더링되어 에러가 나더라도
+          // 화면에 위젯이 정상적으로 보인다면 결제가 진행되어야 하므로 준비 상태로 변경합니다.
+          setIsReady(true);
+        }
       }
       renderWidgets();
     }

@@ -16,14 +16,22 @@ export const metadata: Metadata = {
   title: "결제 완료 - Orbit",
 };
 
-export default async function CheckoutSuccessPage({ searchParams }: { searchParams: Promise<{ [key: string]: string }> }) {
+export default async function CheckoutSuccessPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] }> }) {
   const params = await searchParams;
-  const orderId = params.orderId || "알 수 없음";
-  const amount = params.amount || "0";
-  const theme = params.theme || "";
-  const phone = params.phone || "";
+  const rawOrderId = params.orderId;
+  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : (rawOrderId || "알 수 없음");
+  
+  const rawAmount = params.amount;
+  const amount = Array.isArray(rawAmount) ? rawAmount[0] : (rawAmount || "0");
+  
+  const rawTheme = params.theme;
+  const theme = Array.isArray(rawTheme) ? rawTheme[0] : (rawTheme || "");
+  
+  const rawPhone = params.phone;
+  const phone = Array.isArray(rawPhone) ? rawPhone[0] : (rawPhone || "");
 
-  const paymentKey = params.paymentKey || "";
+  const rawPaymentKey = params.paymentKey;
+  const paymentKey = Array.isArray(rawPaymentKey) ? rawPaymentKey[0] : (rawPaymentKey || "");
 
   // [보안] 결제 금액 변조(해킹) 방어: 백엔드(서버 컴포넌트)에서 금액 재검증
   // getOrderAction을 통해 DB에 저장된 원래 주문 정보 확인
