@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { loadTossPayments, TossPaymentsWidgets } from "@tosspayments/tosspayments-sdk";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CreditCard } from "lucide-react";
+import { getOrderAction } from "@/app/actions/order";
 
 // The client key to use (provided by user for testing)
 const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
@@ -20,16 +21,40 @@ export default function CheckoutClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const theme = searchParams.get("theme") || "";
-  const phone = searchParams.get("phone") || "";
+  const orderId = searchParams.get("orderId") || "";
+  const phone = searchParams.get("phone") || ""; // We might not have phone in query anymore! 
   
-  const themeInfo = THEME_MAP[theme] || { title: "선택된 테마 없음", price: 0 };
-  const amount = themeInfo.price;
+  const [order, setOrder] = useState<any>(null);
+  const [themeInfo, setThemeInfo] = useState<{ title: string; price: number }>({ title: "로딩중...", price: 0 });
+  const [amount, setAmount] = useState(0);
 
   const [widgets, setWidgets] = useState<TossPaymentsWidgets | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
+  // 1. 주문 데이터 로드
   useEffect(() => {
+    async function loadOrder() {
+      if (!orderId) {
+        setErrorMsg("잘못된 접근입니다. 주문 정보를 찾을 수 없습니다.");
+        return;
+      }
+      try {
+        const orderData = await getOrderAction(orderId);
+        setOrder(orderData);
+        const tInfo = THEME_MAP[orderData.theme] || { title: "알 수 없는 테마", price: orderData.amount };
+        setThemeInfo(tInfo);
+        setAmount(orderData.amount);
+      } catch (err: any) {
+        setErrorMsg(err.message || "주문 정보를 불러오는데 실패했습니다.");
+      }
+    }
+    loadOrder();
+  }, [orderId]);
+
+  // 2. 토스 위젯 초기화
+  useEffect(() => {
+    if (!order) return; // 주문이 로드된 후에 초기화
     async function initializeTossPayments() {
       try {
         const tosspayments = await loadTossPayments(TOSS_CLIENT_KEY);
@@ -72,30 +97,30 @@ export default function CheckoutClient() {
     try {
       // Build orderName
       const orderName = `Orbit ${themeInfo.title} 리포트`;
-      const orderId = "ORDER_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8);
       
       const baseUrl = window.location.origin;
 
       await widgets.requestPayment({
-        orderId,
+        orderId: orderId, // DB에서 생성된 주문 ID 그대로 사용
         orderName,
         successUrl: `${baseUrl}/checkout/success${window.location.search}`,
         failUrl: `${baseUrl}/checkout/fail${window.location.search}`,
         customerName: "Orbit Guest",
-        customerMobilePhone: phone.replace(/[^0-9]/g, ''),
       });
     } catch (error) {
       console.error("Payment Error:", error);
     }
   };
 
-  if (!theme || amount === 0) {
+  if (errorMsg || (!orderId && !isReady)) {
     return (
       <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center flex flex-col items-center">
-        <p className="text-white mb-4">잘못된 접근입니다. 주문 정보를 찾을 수 없습니다.</p>
-        <Button onClick={() => router.push("/")} className="bg-white/10 hover:bg-white/20 text-white border-none">
-          메인으로 돌아가기
-        </Button>
+        <p className="text-white mb-4">{errorMsg || "주문 정보를 불러오는 중입니다..."}</p>
+        {errorMsg && (
+          <Button onClick={() => router.push("/")} className="bg-white/10 hover:bg-white/20 text-white border-none">
+            메인으로 돌아가기
+          </Button>
+        )}
       </div>
     );
   }
@@ -132,8 +157,8 @@ export default function CheckoutClient() {
               <span className="text-white font-medium text-right">{themeInfo.title}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-white/60">고객 연락처</span>
-              <span className="text-white font-medium">{phone || "-"}</span>
+              <span className="text-white/60">주문 번호</span>
+              <span className="text-white font-medium truncate max-w-[200px]">{orderId}</span>
             </div>
             <div className="pt-4 border-t border-white/10 flex justify-between items-center mt-2">
               <span className="text-white font-bold">총 결제 금액</span>

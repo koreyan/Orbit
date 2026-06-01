@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AutoLoginTrigger } from "@/components/auth/auto-login-trigger";
+import { confirmPaymentAction } from "@/app/actions/payment";
+import { getOrderAction } from "@/app/actions/order";
 
 const THEME_MAP: Record<string, { title: string; price: number }> = {
   career: { title: "나의 잠재력과 커리어", price: 990 },
@@ -22,19 +23,33 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   const theme = params.theme || "";
   const phone = params.phone || "";
 
+  const paymentKey = params.paymentKey || "";
+
   // [보안] 결제 금액 변조(해킹) 방어: 백엔드(서버 컴포넌트)에서 금액 재검증
-  const expectedAmount = THEME_MAP[theme]?.price;
+  // getOrderAction을 통해 DB에 저장된 원래 주문 정보 확인
+  let order;
+  try {
+    order = await getOrderAction(orderId);
+  } catch (error) {
+    redirect(`/checkout/fail?code=ORDER_NOT_FOUND&message=${encodeURIComponent("주문 정보를 찾을 수 없습니다.")}`);
+  }
+
+  const expectedAmount = order.amount;
   
   if (!expectedAmount || Number(amount) !== expectedAmount) {
     // 악의적인 금액 변조가 감지된 경우 결제 취소(실패) 페이지로 강제 리다이렉트
     redirect(`/checkout/fail?code=AMOUNT_TAMPERED&message=${encodeURIComponent("결제 금액이 변조되어 결제가 자동 취소되었습니다.")}`);
   }
 
-  // Here you would typically call toss payment confirm API with paymentKey
+  // Toss Payment 승인 요청
+  try {
+    await confirmPaymentAction({ paymentKey, orderId, amount: Number(amount) });
+  } catch (error: any) {
+    redirect(`/checkout/fail?code=PAYMENT_CONFIRM_FAILED&message=${encodeURIComponent(error.message)}`);
+  }
   
   return (
     <main className="min-h-screen bg-[#05050a] flex items-center justify-center p-4">
-      <AutoLoginTrigger phone={phone} />
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background to-background"></div>
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full mix-blend-screen filter blur-[128px] animate-pulse"></div>
@@ -67,7 +82,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
           </div>
         </div>
 
-        <Link href={`/reports/${orderId}?theme=${theme}`}>
+        <Link href={`/reports/${orderId}`}>
           <Button className="w-full h-14 rounded-xl bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-lg hover:from-orange-500 hover:to-orange-400">
             내 별빛 이야기 보러가기
           </Button>

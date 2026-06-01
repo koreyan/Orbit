@@ -27,9 +27,13 @@ export async function loginAction(formData: FormData) {
 
   const supabase = await createClient();
 
+  // order.ts의 가입 방식과 동일하게 매핑
+  const dummyEmail = `u${phone.replace(/[^0-9]/g, '')}@orbit-app.com`;
+  const paddedPassword = `${password}_orbit`;
+
   const { error } = await supabase.auth.signInWithPassword({
-    phone,
-    password,
+    email: dummyEmail,
+    password: paddedPassword,
   });
 
   if (error) {

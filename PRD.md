@@ -158,11 +158,11 @@
 결제 전 명반 페이지 렌더링용 자미두수 데이터를 생성하고, 무료 해석 섹션을 위한 기초 데이터를 제공합니다. (Server Action으로 구현됨)
 - `getMyeongbanAction` : 생년월일시 데이터를 받아 `@orrery/core`로 명반 데이터 계산. 명궁(Life Palace)의 주성을 파악(명궁무주성 시 천이궁 주성 차용)하여 `z_knowledge_base` 테이블에서 해당 주성의 `core_trait`을 조회 후 프론트에 전달 (보조성 묶음 데이터와 혼동되지 않도록 정확한 단일 주성 매칭 로직 적용).
 
-### 7.3 Orders API (주문 관리)
-유저의 주문서 생성 및 조회 역할을 담당합니다.
-- `POST /api/orders` : 주문서 생성 (결제 진입 전 임시 주문 정보, 생년월일시, 테마 데이터 저장 및 `orderId` 발급)
-- `GET /api/orders` : (유저) 본인의 주문 내역 리스트 조회
-- `GET /api/orders/[id]` : 특정 주문서 상세 정보 조회 (결제 상태 및 옵션 포함)
+### 7.3 Orders API (주문 관리 및 Toss Payments 연동)
+주문서 생성, 결제 정보 검증 및 Toss Payments 승인 연동을 Server Action으로 처리합니다.
+- `createOrderAction`: 전화번호와 비밀번호를 받아 가상 이메일(`u{phone}@orbit-app.com`) 및 패딩된 비밀번호(`{password}_orbit`)로 백그라운드 회원가입/로그인(이메일 인증 우회)을 처리한 뒤, `public.orders`에 `pending` 상태의 주문을 생성합니다.
+- `getOrderAction`: `orderId`를 기반으로 결제 금액과 테마 등 주문서 상세 정보를 조회하여 클라이언트(결제창)에 전달합니다.
+- `confirmPaymentAction`: 토스페이먼츠 결제창(위젯) 인증 통과 후 리다이렉트되는 성공 페이지에서 호출되며, 서버 대 서버로 Toss Confirm API를 호출하여 결제를 승인하고 `orders`와 `payments` 테이블을 업데이트합니다.
 
 ### 7.4 Payments API (결제 연동)
 토스페이먼츠(v2 SDK)와의 결제 승인 및 검증 로직을 처리합니다.

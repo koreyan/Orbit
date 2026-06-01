@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Lock, Phone } from "lucide-react";
+import { ArrowRight, Lock, Phone, Loader2 } from "lucide-react";
+import { createOrderAction } from "@/app/actions/order";
 
 const THEME_MAP: Record<string, { title: string; price: number }> = {
   career: { title: "나의 잠재력과 커리어", price: 990 },
@@ -27,7 +28,8 @@ export default function OrderFormClient() {
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ phone?: string; password?: string; submit?: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePhoneChange = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
@@ -40,7 +42,7 @@ export default function OrderFormClient() {
     setPhone(formatted);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     let newErrors: { phone?: string; password?: string } = {};
@@ -68,11 +70,37 @@ export default function OrderFormClient() {
       return;
     }
 
-    const query = new URLSearchParams(searchParams.toString());
-    query.set("phone", phone);
-    query.set("password", password); // (추후 서버/DB 단에서 암호화 처리)
+    setIsLoading(true);
+    
+    try {
+      const saju_data = {
+        date,
+        time,
+        gender,
+        location
+      };
 
-    router.push(`/checkout?${query.toString()}`);
+      const { orderId } = await createOrderAction({
+        phone,
+        password,
+        saju_data,
+        theme,
+        amount: themeInfo.price
+      });
+
+      // 성공 시 orderId를 가지고 checkout 페이지로 이동
+      const query = new URLSearchParams(searchParams.toString());
+      query.set("orderId", orderId);
+      
+      // 보안상 password는 URL 파라미터에서 제외
+      if (query.has("password")) query.delete("password");
+      
+      router.push(`/checkout?${query.toString()}`);
+    } catch (error: any) {
+      console.error(error);
+      setErrors({ submit: error.message });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -134,12 +162,25 @@ export default function OrderFormClient() {
           </div>
         </div>
 
+        {errors.submit && (
+          <div className="text-center text-red-500 font-medium text-sm">
+            {errors.submit}
+          </div>
+        )}
+
         <Button 
           type="submit" 
-          className="w-full h-14 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all"
+          disabled={isLoading}
+          className="w-full h-14 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all disabled:opacity-50"
         >
-          내 별빛 이야기 보러가기
-          <ArrowRight className="ml-2 w-5 h-5" />
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              내 별빛 이야기 보러가기
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </>
+          )}
         </Button>
       </form>
     </div>
