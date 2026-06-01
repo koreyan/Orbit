@@ -16,7 +16,15 @@ const GRID_LAYOUT = [
   ['寅', '丑', '子', '亥']
 ];
 
-export default function ResultClient({ chartData, params }: { chartData: any, params: any }) {
+export default function ResultClient({ 
+  chartData, 
+  interpretation,
+  params 
+}: { 
+  chartData: any, 
+  interpretation: { primaryStars: string[], borrowed: boolean, coreTrait: string },
+  params: any 
+}) {
   const router = useRouter();
   const [theme, setTheme] = useState<"career" | "love" | "hobby" | "">("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -43,32 +51,11 @@ export default function ResultClient({ chartData, params }: { chartData: any, pa
     return Object.values(chartData.palaces).find((p: any) => p.zhi === zhi) as any;
   };
 
-  // 명궁(Life Palace) 찾기
-  const lifePalace = Object.values(chartData.palaces).find((p: any) => p.name === '命宮') as any;
-  const lifeMainStars = lifePalace?.stars.filter((s: any) => s.brightness !== '') || [];
-  
-  let targetStars = lifeMainStars;
-  let isMigrationUsed = false;
-
-  // 명궁무주성(명궁에 주성이 없는 경우) 천이궁(Migration Palace)의 별을 차용
-  if (lifeMainStars.length === 0) {
-    const migrationPalace = Object.values(chartData.palaces).find((p: any) => p.name === '遷移宮') as any;
-    const migrationMainStars = migrationPalace?.stars.filter((s: any) => s.brightness !== '') || [];
-    targetStars = migrationMainStars;
-    isMigrationUsed = true;
-  }
-
-  const targetStarNames = targetStars.map((s: any) => translateZiwei(s.name)).join(', ');
-
-  const interpretationTitle = isMigrationUsed 
-    ? "당신의 명궁에 숨겨진, 매우 특별하고 흥미로운 진짜 모습입니다! ✨" 
-    : "당신의 진짜 모습을 결정짓는 핵심 별자리입니다 ✨";
-  
-  const interpretationText = targetStarNames
-    ? (isMigrationUsed 
-        ? `당신의 명궁은 비어있어, 평생의 무대가 되는 맞은편 '천이궁'의 [${targetStarNames}] 에너지를 강하게 끌어다 씁니다. 빈 그릇처럼 외부 환경에 유연하게 적응하며, 밖에서 활동할 때 당신의 진짜 모습이 폭발적으로 드러납니다.`
-        : `당신의 중심 별은 [${targetStarNames}]입니다. 이 별빛의 기운을 강하게 받아 타고난 강점과 고유한 매력이 당신의 진짜 모습으로 돋보입니다. 당신만의 특별한 '나 활용법'을 일깨워보세요.`)
-    : "당신이라는 우주에 아주 신비로운 별빛이 숨어있습니다.";
+  // DB에서 가져온 해석 정보를 렌더링 변수로 할당
+  const targetStarNames = interpretation.primaryStars.join(', ');
+  const interpretationTitle = interpretation.borrowed 
+    ? `당신의 천이궁에 숨겨진, [${targetStarNames}]의 특별한 진짜 모습입니다! ✨` 
+    : `당신의 진짜 모습을 결정짓는 핵심 별자리 [${targetStarNames}]입니다 ✨`;
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-150 fill-mode-both max-w-4xl mx-auto">
@@ -104,7 +91,7 @@ export default function ResultClient({ chartData, params }: { chartData: any, pa
               const palace = getPalaceByZhi(zhi);
               if (!palace) return <div key={idx} className="border border-white/5 rounded-xl" />;
 
-              const isLifeOrMigration = palace.name === '命宮' || (isMigrationUsed && palace.name === '遷移宮');
+              const isLifeOrMigration = palace.name === '命宮' || (interpretation.borrowed && palace.name === '遷移宮');
 
               return (
                 <div key={idx} className={`relative flex flex-col justify-between p-2 md:p-3 border rounded-xl overflow-hidden transition-all duration-300 ${isLifeOrMigration ? 'border-primary/50 bg-primary/10 shadow-[0_0_15px_rgba(255,107,53,0.3)]' : 'border-white/10 bg-white/[0.03]'}`}>
@@ -145,8 +132,8 @@ export default function ResultClient({ chartData, params }: { chartData: any, pa
               {interpretationTitle}
             </p>
             <div className="bg-black/30 rounded-2xl p-5 border border-white/10 shadow-inner">
-              <p className="text-white/90 leading-relaxed text-sm md:text-base">
-                {interpretationText}
+              <p className="text-white/90 leading-relaxed text-sm md:text-base whitespace-pre-wrap">
+                {interpretation.coreTrait}
               </p>
             </div>
             <p className="text-xs text-white/50 mt-5 text-center flex items-center justify-center gap-1">

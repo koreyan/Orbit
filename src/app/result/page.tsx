@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import ResultClient from "./ResultClient";
 import { StarBackground } from "@/components/ui/star-background";
-import { createChart } from "@orrery/core/ziwei";
+import { getMyeongbanAction } from "@/app/actions/myeongban";
 import { BackButton } from "@/components/ui/back-button";
 
 type Props = {
@@ -24,12 +24,15 @@ export default async function ResultPage(props: Props) {
   const [hour, minute] = timeStr.split(":").map(Number);
   const isMale = genderStr === "M";
 
-  // @orrery/core 패키지를 사용해 서버에서 자미두수 명반 렌더링용 데이터 생성
+  // 명반 및 기초 해설 데이터 생성/조회 (DB 연동)
   let chartData;
+  let interpretation;
   try {
-    chartData = createChart(year, month, day, hour, minute, isMale);
+    const result = await getMyeongbanAction({ date: dateStr, time: timeStr, gender: genderStr, location: locationStr });
+    chartData = result.chartData;
+    interpretation = result.interpretation;
   } catch (error) {
-    console.error("Failed to generate Ziwei chart:", error);
+    console.error("Failed to generate Ziwei chart or fetch interpretation:", error);
     redirect("/");
   }
 
@@ -51,8 +54,12 @@ export default async function ResultPage(props: Props) {
           </p>
         </div>
 
-        {/* 클라이언트 컴포넌트로 차트 데이터 전달 */}
-        <ResultClient chartData={chartData} params={{ date: dateStr, time: timeStr, gender: genderStr, location: locationStr }} />
+        {/* 클라이언트 컴포넌트로 차트 데이터 및 DB 해설 전달 */}
+        <ResultClient 
+          chartData={chartData} 
+          interpretation={interpretation} 
+          params={{ date: dateStr, time: timeStr, gender: genderStr, location: locationStr }} 
+        />
       </div>
     </div>
   );

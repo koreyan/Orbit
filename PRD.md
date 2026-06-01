@@ -146,17 +146,17 @@
 
 ## 7. API 구조 (API Architecture)
 
-본 프로젝트는 Next.js API Routes (Route Handlers)와 Supabase를 기반으로 구성되며, MECE(Mutually Exclusive, Collectively Exhaustive) 원칙에 따라 도메인별로 API를 설계합니다.
+본 프로젝트는 Next.js 14 App Router의 **Server Actions**를 주력으로 사용하여 내부 비즈니스 로직을 처리하며, 외부 연동(결제 웹훅 등)에만 API Routes를 혼용하여 구성합니다.
 
 ### 7.1 Auth API (인증/인가)
-비회원 유저와 관리자의 인증 상태를 관리합니다.
-- `POST /api/auth/login` : 비회원 로그인 (전화번호, 비밀번호 기반 검증 및 Supabase 세션 발급)
-- `POST /api/auth/logout` : 로그아웃 및 세션 파기
-- `POST /api/auth/admin/login` : 관리자 로그인 (관리자 권한 검증 및 세션 발급)
+비회원 유저와 관리자의 인증 상태를 관리합니다. (Server Actions로 구현됨)
+- `loginAction` : 비회원 로그인 (전화번호, 비밀번호 기반 검증, 5회 실패 시 5분 잠금 및 Supabase 세션 자동 발급)
+- `logoutAction` : 로그아웃 및 세션 파기
+- `adminLoginAction` : 관리자 로그인 (관리자 권한 검증 및 세션 발급)
 
 ### 7.2 Myeongban API (명반 조회 및 기초 해석 데이터 제공)
-결제 전 명반 페이지 렌더링용 자미두수 데이터를 생성하고, 무료 해석 섹션을 위한 기초 데이터를 제공합니다.
-- (Server Component 또는 API) : 생년월일시 데이터를 받아 자미두수 명반 데이터 계산. 추가로 명궁(Life Palace)의 주성을 파악(주성이 없으면 천이궁 주성 파악)하여 `z_knowledge_base` 테이블에서 해당 주성의 `core_trait` (또는 요약 데이터)를 조회하여 클라이언트에 함께 전달.
+결제 전 명반 페이지 렌더링용 자미두수 데이터를 생성하고, 무료 해석 섹션을 위한 기초 데이터를 제공합니다. (Server Action으로 구현됨)
+- `getMyeongbanAction` : 생년월일시 데이터를 받아 `@orrery/core`로 명반 데이터 계산. 명궁(Life Palace)의 주성을 파악(명궁무주성 시 천이궁 주성 차용)하여 `z_knowledge_base` 테이블에서 해당 주성의 `core_trait`을 조회 후 프론트에 전달 (보조성 묶음 데이터와 혼동되지 않도록 정확한 단일 주성 매칭 로직 적용).
 
 ### 7.3 Orders API (주문 관리)
 유저의 주문서 생성 및 조회 역할을 담당합니다.
@@ -192,6 +192,7 @@ Supabase Auth(`auth.users`)와 연결되는 사용자 정보 확장 테이블입
 - `phone_number` (varchar) : 로그인 및 식별용 전화번호, **NOT NULL**
 - `role` (varchar) : 권한 ('user', 'admin'), **NOT NULL** (Default: 'user')
 - `created_at` (timestamptz) : 생성일시, **NOT NULL** (Default: now())
+- **[PostgreSQL Trigger]**: `auth.users`에 신규 가입자가 생기면 `handle_new_user` 트리거가 동작하여 자동으로 이 테이블에 데이터를 동기화합니다.
 
 ### 8.2 `orders` (주문서)
 사주 입력 데이터, 선택 테마 및 주문의 진행 상태를 저장합니다.

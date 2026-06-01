@@ -1,9 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-
-const SESSION_COOKIE_NAME = "orbit_session";
 
 // 인메모리 로그인 시도 횟수 추적 (E2E 테스트용)
 // 실제 환경에서는 Redis 등 캐시 DB를 사용해야 합니다.
@@ -18,7 +16,7 @@ export async function loginAction(formData: FormData) {
   }
 
   // [보안] 브루트포스 방어 로직 시뮬레이션 (메모리 캐시)
-  const ip = phone; // 실제로는 headers().get("x-forwarded-for") 등 IP를 사용하지만, 테스트 격리를 위해 phone 사용
+  const ip = phone; // 테스트 격리를 위해 phone 번호 자체를 키로 사용
   const now = Date.now();
   const attempt = loginAttempts.get(ip) || { count: 0, lockUntil: 0 };
 
@@ -27,11 +25,14 @@ export async function loginAction(formData: FormData) {
     throw new Error(`비정상적인 로그인 시도가 감지되었습니다. ${remainMin}분 후에 다시 시도해주세요.`);
   }
 
-  // 가입된 전화번호 및 비밀번호 검증 시뮬레이션 (DB 대용)
-  // E2E 테스트를 위해 '010-1234-5678' / 'password123' 만 성공으로 처리
-  const isValidUser = phone === "010-1234-5678" && password === "password123";
+  const supabase = await createClient();
 
-  if (!isValidUser) {
+  const { error } = await supabase.auth.signInWithPassword({
+    phone,
+    password,
+  });
+
+  if (error) {
     // 실패 횟수 증가
     attempt.count += 1;
     if (attempt.count >= 5) {
@@ -41,41 +42,59 @@ export async function loginAction(formData: FormData) {
     }
     loginAttempts.set(ip, attempt);
     
-    // 미가입 번호이거나 비밀번호가 틀린 경우 동일한 에러 메시지를 줘서 유추 불가능하게 처리하는 것이 정석이나,
-    // 기획 요구사항에 따라 "일치하는 별빛 이야기가 없습니다" 문구 노출
     throw new Error("일치하는 별빛 이야기가 없습니다. 입력하신 정보를 다시 확인해주세요.");
   }
 
   // 로그인 성공 시 카운트 초기화
   loginAttempts.delete(ip);
 
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, phone, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7, // 1주일
-    path: "/",
-  });
-
   redirect("/reports");
 }
 
 export async function autoLoginAction(phone: string) {
+  // 추후 주문(Order) 액션 내에서 supabase.auth.signUp()을 호출하면
+  // 자동으로 쿠키가 셋팅되므로, 기존 임시 autoLoginAction의 쿠키 수동 설정 로직은 제거합니다.
   if (!phone) return;
-  
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, phone, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7, // 1주일
-    path: "/",
-  });
-  // 클라이언트에서 호출될 것이므로 redirect 대신 성공 상태만 반환합니다.
   return { success: true };
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  const supabase = await createClient();
+  await supabase.auth.signOut();
   redirect("/");
+}
+
+export async function adminLoginAction(formData: FormData) {
+  const identifier = formData.get("identifier") as string; // 이메일 또는 전화번호
+  const password = formData.get("password") as string;
+
+  if (!identifier || !password) {
+    throw new Error("아이디(또는 전화번호)와 비밀번호를 모두 입력해주세요.");
+  }
+
+  const supabase = await createClient();
+
+  const isEmail = identifier.includes('@');
+  const credentials = isEmail 
+    ? { email: identifier, password } 
+    : { phone: identifier, password };
+
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword(credentials);
+
+  if (authError || !authData.user) {
+    throw new Error("관리자 로그인에 실패했습니다.");
+  }
+
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', authData.user.id)
+    .single();
+
+  if (userError || userData?.role !== 'admin') {
+    await supabase.auth.signOut();
+    throw new Error("관리자 권한이 없습니다.");
+  }
+
+  redirect("/admin");
 }
