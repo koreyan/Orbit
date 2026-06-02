@@ -27,10 +27,14 @@ export default async function ResultPage(props: Props) {
   // 명반 및 기초 해설 데이터 생성/조회 (DB 연동)
   let chartData;
   let interpretation;
+  let daxianList;
+  let currentLiunian;
   try {
     const result = await getMyeongbanAction({ date: dateStr, time: timeStr, gender: genderStr, location: locationStr });
     chartData = result.chartData;
     interpretation = result.interpretation;
+    daxianList = result.daxianList;
+    currentLiunian = result.currentLiunian;
   } catch (error) {
     console.error("Failed to generate Ziwei chart or fetch interpretation:", error);
     redirect("/");
@@ -57,6 +61,8 @@ export default async function ResultPage(props: Props) {
         {/* 클라이언트 컴포넌트로 차트 데이터 및 DB 해설 전달 */}
         <ResultClient 
           chartData={chartData} 
+          daxianList={daxianList}
+          currentLiunian={currentLiunian}
           interpretation={interpretation} 
           params={{ date: dateStr, time: timeStr, gender: genderStr, location: locationStr }} 
         />

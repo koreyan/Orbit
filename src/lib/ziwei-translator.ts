@@ -42,7 +42,7 @@ const hanjaToKoreanMap: Record<string, string> = {
   '天魁': '천괴',
   '天鉞': '천월',
   '火星': '화성',
-  '鈴星': '령성',
+  '鈴星': '영성',
   '天馬': '천마',
   
   // Other Stars (잡성)

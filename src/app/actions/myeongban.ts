@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createChart } from "@orrery/core/ziwei";
+import { createChart, getDaxianList, calculateLiunian } from "@orrery/core/ziwei";
 import { translateZiwei } from "@/lib/ziwei-translator";
 
 // 14 정성 (주성) 한자 목록
@@ -29,8 +29,12 @@ export async function getMyeongbanAction(params: {
 
   // 1. 명반 계산
   let chartData;
+  let daxianList;
+  let currentLiunian;
   try {
     chartData = createChart(year, month, day, hour, minute, isMale);
+    daxianList = getDaxianList(chartData);
+    currentLiunian = calculateLiunian(chartData, new Date().getFullYear());
   } catch (error) {
     console.error("Chart generation error:", error);
     throw new Error("명반 데이터를 생성하는 중 오류가 발생했습니다.");
@@ -55,29 +59,33 @@ export async function getMyeongbanAction(params: {
   let coreTrait = "매우 특별하고 흥미로운 성향을 가지고 있습니다.";
   
   if (primaryStarNames.length > 0) {
-    const supabase = await createClient();
-    
-    // 첫 번째 주성의 이름(예: '염정')으로 지식베이스의 target_subject 검색
-    const starName = primaryStarNames[0];
-    
-    const { data, error } = await supabase
-      .from('z_knowledge_base')
-      .select('target_subject, core_trait')
-      .eq('category', 'star')
-      .ilike('target_subject', `%${starName}%`);
+    try {
+      const supabase = await createClient();
+      
+      // 첫 번째 주성의 이름(예: '염정')으로 지식베이스의 target_subject 검색
+      const starName = primaryStarNames[0];
+      
+      const { data, error } = await supabase
+        .from('z_knowledge_base')
+        .select('target_subject, core_trait')
+        .eq('category', 'star')
+        .ilike('target_subject', `%${starName}%`);
 
-    if (!error && data && data.length > 0) {
-      // '인맥형 도화성...' 같이 보조성이 묶인 항목이 먼저 잡히는 것을 방지
-      // '천상성' 같이 해당 주성 이름으로 정확히 시작하는 항목을 최우선으로 찾음
-      const exactMatch = data.find(d => d.target_subject.startsWith(`${starName}성`)) || data[0];
-      coreTrait = exactMatch.core_trait;
-    } else if (error) {
-      console.warn(`Error fetching knowledge base entry for ${starName}:`, error.message);
+      if (!error && data && data.length > 0) {
+        const exactMatch = data.find(d => d.target_subject.startsWith(`${starName}성`)) || data[0];
+        coreTrait = exactMatch.core_trait;
+      } else if (error) {
+        console.warn(`Error fetching knowledge base entry for ${starName}:`, error.message);
+      }
+    } catch (e) {
+      console.warn('DB fetch failed', e);
     }
   }
 
   return {
     chartData,
+    daxianList,
+    currentLiunian,
     interpretation: {
       primaryStars: primaryStarNames,
       borrowed,
