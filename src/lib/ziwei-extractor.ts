@@ -94,7 +94,7 @@ export function filterThemePalaces(extracted: ExtractedChart, theme: string) {
       themePalaces = [extracted['官祿'], extracted['財帛']]; // 관록궁, 재백궁
       break;
     case 'love':
-      themePalaces = [extracted['夫妻'], extracted['遷移']]; // 부처궁, 천이궁
+      themePalaces = [extracted['夫妻'], extracted['遷移'], extracted['子女']]; // 부처궁, 천이궁, 자녀궁(본능적 매력/도화)
       break;
     case 'hobby':
       themePalaces = [extracted['疾厄'], extracted['福德']]; // 질액궁, 복덕궁
@@ -109,4 +109,35 @@ export function filterThemePalaces(extracted: ExtractedChart, theme: string) {
     lifePalace,
     themePalaces
   };
+}
+
+/**
+ * 화록(化祿)과 록존(祿存)이 위치한 궁을 동적으로 탐색하는 함수.
+ * 커리어/재물 테마에서 '돈이 흘러나오는 진짜 금광(수익 파이프라인)'을 찾기 위해 사용.
+ */
+export function findLuStarPalaces(extracted: ExtractedChart): ExtractedPalace[] {
+  const luPalaces: ExtractedPalace[] = [];
+  const addedPalaceNames = new Set<string>();
+
+  for (const [key, palace] of Object.entries(extracted)) {
+    if (!palace) continue;
+
+    // 모든 별(주성, 길성, 흉성)을 순회하며 록존 또는 화록 사화를 찾음
+    const allStars = [
+      ...(palace.majorStars || []),
+      ...(palace.luckyStars || []),
+      ...(palace.unluckyStars || [])
+    ];
+
+    const hasLuStar = allStars.some(
+      (s: StarWithSiHua) => s.name === '녹존' || s.sihua === '화록'
+    );
+
+    if (hasLuStar && !addedPalaceNames.has(key)) {
+      luPalaces.push(palace);
+      addedPalaceNames.add(key);
+    }
+  }
+
+  return luPalaces;
 }
