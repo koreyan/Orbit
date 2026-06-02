@@ -249,25 +249,45 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 `).join("\n")}
 `;
 
-  // 7. Gemini API 호출
-  try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
+  // 7. Gemini API 호출 및 자가복구(Retry) 로직
+  const MAX_RETRIES = 5;
+  let attempt = 0;
+  let success = false;
+  let parsedContent = null;
+
+  while (attempt < MAX_RETRIES && !success) {
+    try {
+      attempt++;
+      console.log(`Gemini API 호출 시도 (${attempt}/${MAX_RETRIES})...`);
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+        }
+      });
+
+      const result = await model.generateContent([
+        { text: systemPrompt },
+        { text: userContext }
+      ]);
+
+      const responseText = result.response.text();
+      parsedContent = JSON.parse(responseText);
+      success = true; // 성공 시 루프 탈출
+    } catch (error) {
+      console.error(`Gemini API 호출 실패 (시도 ${attempt}):`, error);
+      if (attempt >= MAX_RETRIES) {
+        await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
+        throw new Error("리포트 생성에 실패했습니다. (최대 재시도 횟수 초과)");
       }
-    });
+      // 재시도 전 1.5초 대기 (백오프)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
 
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: userContext }
-    ]);
-
-    const responseText = result.response.text();
-    const parsedContent = JSON.parse(responseText);
-
-    // 8. 결과 저장
+  // 8. 결과 저장
+  if (success && parsedContent) {
     await adminClient.from("reports").update({
       content: parsedContent,
       status: "completed",
@@ -275,11 +295,6 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
     }).eq("id", reportId);
 
     return { success: true, reportId };
-
-  } catch (error) {
-    console.error("Gemini Generation Error:", error);
-    await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
-    throw new Error("리포트 생성에 실패했습니다.");
   }
 }
 
