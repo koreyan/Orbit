@@ -91,6 +91,7 @@ export default function OrderFormClient() {
       // 성공 시 orderId를 가지고 checkout 페이지로 이동
       const query = new URLSearchParams(searchParams.toString());
       query.set("orderId", orderId);
+      query.set("phone", phone); // 연락처 전달
       
       // 보안상 password는 URL 파라미터에서 제외
       if (query.has("password")) query.delete("password");

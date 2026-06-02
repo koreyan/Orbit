@@ -72,21 +72,21 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
         <p className="text-white/60 mb-8">결제가 정상적으로 처리되어 당신만의 진짜 모습을 읽어낼 준비를 마쳤습니다.</p>
         
         <div className="bg-white/5 rounded-2xl p-6 text-left mb-8 space-y-4">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/50">주문번호</span>
-            <span className="text-white font-mono">{orderId}</span>
+          <div className="flex justify-between items-center text-sm gap-4">
+            <span className="text-white/50 whitespace-nowrap flex-shrink-0">주문번호</span>
+            <span className="text-white font-mono text-xs break-all text-right">{orderId}</span>
           </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/50">결제금액</span>
-            <span className="text-white font-bold">{Number(amount).toLocaleString()}원</span>
+          <div className="flex justify-between items-center text-sm gap-4">
+            <span className="text-white/50 whitespace-nowrap flex-shrink-0">결제금액</span>
+            <span className="text-white font-bold text-right">{Number(amount).toLocaleString()}원</span>
           </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/50">테마</span>
-            <span className="text-white">{theme === 'career' ? '커리어' : theme === 'love' ? '연애' : theme === 'hobby' ? '여가/웰니스' : theme}</span>
+          <div className="flex justify-between items-center text-sm gap-4">
+            <span className="text-white/50 whitespace-nowrap flex-shrink-0">테마</span>
+            <span className="text-white text-right">{theme === 'career' ? '커리어' : theme === 'love' ? '연애' : theme === 'hobby' ? '여가/웰니스' : theme}</span>
           </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/50">연락처</span>
-            <span className="text-white">{phone}</span>
+          <div className="flex justify-between items-center text-sm gap-4">
+            <span className="text-white/50 whitespace-nowrap flex-shrink-0">연락처</span>
+            <span className="text-white text-right">{phone}</span>
           </div>
         </div>
 
