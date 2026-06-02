@@ -101,29 +101,29 @@ export default function ResultClient({
                     {/* 주성 (Major Stars) */}
                     <div className="flex flex-col gap-1">
                       {palace.stars.filter((s: any) => MAJOR_STARS.includes(s.name)).map((star: any, sIdx: number) => (
-                        <span key={`m-${sIdx}`} className="text-[10px] md:text-xs font-bold text-amber-400 leading-none flex items-center">
+                        <span key={`m-${sIdx}`} className="text-xs md:text-sm font-bold text-amber-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
-                          {star.siHua && <span className="text-[8px] bg-white/20 text-white rounded px-0.5 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                          {star.siHua && <span className="text-[10px] bg-white/20 text-white rounded px-1 ml-1">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
 
                     {/* 길성 (Lucky Stars) */}
-                    <div className="flex flex-wrap gap-1 mt-0.5">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {palace.stars.filter((s: any) => LUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
-                        <span key={`l-${sIdx}`} className="text-[9px] md:text-[10px] font-semibold text-emerald-400 leading-none flex items-center">
+                        <span key={`l-${sIdx}`} className="text-[10px] md:text-xs font-semibold text-emerald-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
-                          {star.siHua && <span className="text-[7px] bg-white/20 text-white rounded px-0.5 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                          {star.siHua && <span className="text-[9px] bg-white/20 text-white rounded px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
 
                     {/* 흉성 (Unlucky Stars) */}
-                    <div className="flex flex-wrap gap-1 mt-0.5">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {palace.stars.filter((s: any) => UNLUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
-                        <span key={`u-${sIdx}`} className="text-[9px] md:text-[10px] font-semibold text-rose-400 leading-none flex items-center">
+                        <span key={`u-${sIdx}`} className="text-[10px] md:text-xs font-semibold text-rose-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
-                          {star.siHua && <span className="text-[7px] bg-white/20 text-white rounded px-0.5 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                          {star.siHua && <span className="text-[9px] bg-white/20 text-white rounded px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
