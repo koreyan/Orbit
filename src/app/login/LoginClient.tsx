@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
 export default function LoginClient() {
+  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +37,10 @@ export default function LoginClient() {
       formData.append("password", password);
       
       // Server Action 호출
-      await loginAction(formData);
+      const result = await loginAction(formData);
+      if (result.success) {
+        router.push("/reports");
+      }
     } catch (err: any) {
       setError(err.message || "로그인에 실패했습니다.");
       setIsLoading(false);

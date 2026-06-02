@@ -52,7 +52,7 @@ export async function loginAction(formData: FormData) {
   // 로그인 성공 시 카운트 초기화
   loginAttempts.delete(ip);
 
-  redirect("/reports");
+  return { success: true };
 }
 
 export async function autoLoginAction(phone: string) {
