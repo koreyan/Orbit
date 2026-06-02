@@ -62,8 +62,8 @@ export async function generateReportAction(orderId: string) {
   
   // 분석 대상 주성 추출 (중복 제거)
   const starsToAnalyze = new Set<string>();
-  lifePalace.stars.forEach(s => starsToAnalyze.add(s));
-  themePalaces.forEach(p => p.stars.forEach(s => starsToAnalyze.add(s)));
+  lifePalace.majorStars.forEach((s: any) => starsToAnalyze.add(s.name));
+  themePalaces.forEach((p: any) => p.majorStars.forEach((s: any) => starsToAnalyze.add(s.name)));
 
   // 4. 지식베이스 (Ground Truth) 로드
   const { createClient: createAdminClient } = await import('@supabase/supabase-js');
@@ -78,6 +78,9 @@ export async function generateReportAction(orderId: string) {
   const systemPrompt = `
 당신은 세계 최고의 자미두수 명리학 마스터이자 심리 상담가입니다. 따뜻하고 우아하며 현대적인 한국어로 유저의 강점과 잠재력을 응원하는 톤앤매너를 유지하세요. 제공된 지식베이스(Knowledge Base)의 의미를 절대 왜곡하지 말고, 이를 유저의 상황에 맞게 유려한 스토리텔링으로 엮어내야 합니다.
 
+특별 지시사항:
+제공된 보조성(길성/흉성)과 사화(화록/권/과/기 - 대괄호 표기)는 주성의 에너지를 어떻게 증폭시키거나 억제하는지를 설명하는 핵심 열쇠입니다. 길성과 흉성이 주성에 미치는 영향, 그리고 사화가 붙은 주성의 극적인 변화를 긍정적이고 건설적인 방향으로 해석에 자연스럽게 녹여내세요.
+
 다음 JSON 스키마를 엄격히 준수하여 응답하세요. 다른 텍스트는 출력하지 마세요.
 {
   "teaser_quote": "30자 이내의 강력한 훅 문구 (예: 타고난 기획자! 하지만 완벽주의가 당신을 피곤하게 할 수 있습니다.)",
@@ -87,12 +90,19 @@ export async function generateReportAction(orderId: string) {
 }
 `;
 
+  const formatPalaceStars = (palace: any) => {
+    const major = palace.majorStars.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ");
+    const lucky = palace.luckyStars.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ");
+    const unlucky = palace.unluckyStars.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ");
+    return `주성: [${major || '무주성'}], 길성: [${lucky || '없음'}], 흉성: [${unlucky || '없음'}]`;
+  };
+
   const userContext = `
 선택한 테마: ${theme}
 
 [유저의 자미두수 궁(Palace) 데이터]
-- 명궁 (나의 본질): ${lifePalace.stars.join(", ") || "무주성 (대궁 차용됨)"}
-- 테마 관련 궁: ${themePalaces.map(p => `${p.name}: ${p.stars.join(", ")}`).join(" | ")}
+- 명궁 (나의 본질): ${formatPalaceStars(lifePalace)}
+- 테마 관련 궁: ${themePalaces.map((p: any) => `${p.name}: ${formatPalaceStars(p)}`).join(" | ")}
 
 [지식베이스 (Ground Truth)]
 ${Object.entries(knowledgeBase).map(([star, insight]) => `

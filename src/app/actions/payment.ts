@@ -69,7 +69,7 @@ export async function confirmPaymentAction(params: {
       payment_key: paymentKey,
       amount: paymentData.totalAmount,
       method: paymentData.method,
-      status: paymentData.status,
+      status: paymentData.status ? paymentData.status.toLowerCase() : "done",
       paid_at: paymentData.approvedAt,
     });
 

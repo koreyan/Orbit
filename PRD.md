@@ -164,7 +164,7 @@
 
 ### 7.3 Orders API (주문 관리 및 Toss Payments 연동)
 주문서 생성, 결제 정보 검증 및 Toss Payments 승인 연동을 Server Action으로 처리합니다.
-- `createOrderAction`: 전화번호와 비밀번호를 받아 가상 이메일(`u{phone}@orbit-app.com`) 및 패딩된 비밀번호(`{password}_orbit`)로 백그라운드 회원가입/로그인(이메일 인증 우회)을 처리한 뒤, `public.orders`에 `pending` 상태의 주문을 생성합니다.
+- `createOrderAction`: 전화번호와 비밀번호를 받아 가상 이메일(`u{phone}@orbit-app.com`) 및 패딩된 비밀번호(`{password}_orbit`)로 백그라운드 회원가입/로그인(이메일 인증 우회)을 처리한 뒤, `public.orders`에 `pending` 상태의 주문을 생성합니다. 주문 생성 시 `@orrery/core`를 활용해 명반을 선계산하여 주성(14정성), 보조성(길성/흉성 14개), 사화(화록/화권/화과/화기)를 추출 및 차성안궁 로직을 거쳐 `saju_data`에 함께 보관합니다.
 - `getOrderAction`: `orderId`를 기반으로 결제 금액과 테마 등 주문서 상세 정보를 조회하여 클라이언트(결제창)에 전달합니다.
 - `confirmPaymentAction`: 토스페이먼츠 결제창(위젯) 인증 통과 후 리다이렉트되는 성공 페이지에서 호출되며, 서버 대 서버로 Toss Confirm API를 호출하여 결제를 승인하고 `orders`와 `payments` 테이블을 업데이트합니다. (Toss 리다이렉트에 의한 쿼리 파라미터 중복/배열화 문제 방어 처리 포함)
   - *보안/안정성:* 3rd Party 결제 모듈(Toss) 리다이렉트 시 브라우저 정책(SameSite)으로 인해 발생하는 세션 유실 및 RLS(Row Level Security) 접근 제한 에러 방지를 위해, 결제 검증 후 DB 업데이트 시 Admin Client(`SERVICE_ROLE_KEY`)를 사용하여 강제 업데이트 처리.
@@ -178,7 +178,7 @@
 Gemini AI 기반의 분석 결과 리포트 생성을 담당합니다.
 - `GET /api/reports/[id]` : 생성된 자미두수 분석 리포트 내용 조회
 - `GET /api/reports/shared/[id]` : 외부 공유된 자미두수 리포트 퍼블릭 조회
-- `POST /api/reports/[id]/generate` : 주문 정보를 바탕으로 Gemini API를 호출하여 자미두수 분석 결과 (재)생성 (결제 완료 시 자동 호출 또는 관리자 수동 재생성)
+- `POST /api/reports/[id]/generate` : 주문 정보를 바탕으로 Gemini API를 호출하여 자미두수 분석 결과 (재)생성 (결제 완료 시 자동 호출). 프롬프트 컨텍스트에 주성뿐만 아니라 길성, 흉성, 사화(화록/화권/화과/화기)를 구조화하여 전달하며, 사화의 에너지 변화를 긍정적으로 해석하도록 지시합니다.
 
 ### 7.6 Admin API (관리자 전용)
 관리자 대시보드 및 전체 서비스 데이터 관리를 수행합니다.

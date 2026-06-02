@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Briefcase, Heart, Gamepad2, ArrowRight, Sparkles } from "lucide-react";
 import { translateZiwei } from "@/lib/ziwei-translator";
+import { MAJOR_STARS, LUCKY_STARS, UNLUCKY_STARS } from "@/lib/ziwei-extractor";
 
 // Grid Layout based on traditional Ziwei Doushu chart
 const GRID_LAYOUT = [
@@ -95,16 +96,40 @@ export default function ResultClient({
 
               return (
                 <div key={idx} className={`relative flex flex-col justify-between p-2 md:p-3 border rounded-xl overflow-hidden transition-all duration-300 ${isLifeOrMigration ? 'border-primary/50 bg-primary/10 shadow-[0_0_15px_rgba(255,107,53,0.3)]' : 'border-white/10 bg-white/[0.03]'}`}>
-                  <div className="flex flex-col gap-1 overflow-hidden">
-                    <div className="flex flex-wrap gap-1">
-                      {palace.stars.filter((s: any) => s.brightness !== '').map((star: any, sIdx: number) => (
-                        <span key={sIdx} className="text-[10px] md:text-xs font-bold text-orange-400 leading-none">
+                  <div className="flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar">
+                    
+                    {/* 주성 (Major Stars) */}
+                    <div className="flex flex-col gap-1">
+                      {palace.stars.filter((s: any) => MAJOR_STARS.includes(s.name)).map((star: any, sIdx: number) => (
+                        <span key={`m-${sIdx}`} className="text-[10px] md:text-xs font-bold text-amber-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
+                          {star.siHua && <span className="text-[8px] bg-white/20 text-white rounded px-0.5 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
+
+                    {/* 길성 (Lucky Stars) */}
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {palace.stars.filter((s: any) => LUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
+                        <span key={`l-${sIdx}`} className="text-[9px] md:text-[10px] font-semibold text-emerald-400 leading-none flex items-center">
+                          {translateZiwei(star.name)}
+                          {star.siHua && <span className="text-[7px] bg-white/20 text-white rounded px-0.5 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* 흉성 (Unlucky Stars) */}
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {palace.stars.filter((s: any) => UNLUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
+                        <span key={`u-${sIdx}`} className="text-[9px] md:text-[10px] font-semibold text-rose-400 leading-none flex items-center">
+                          {translateZiwei(star.name)}
+                          {star.siHua && <span className="text-[7px] bg-white/20 text-white rounded px-0.5 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                        </span>
+                      ))}
+                    </div>
+
                   </div>
-                  <div className="mt-4 flex items-end justify-between w-full border-t border-white/5 pt-2">
+                  <div className="mt-2 flex items-end justify-between w-full border-t border-white/5 pt-1">
                     <span className="text-[9px] md:text-[10px] text-white/40">{translateZiwei(palace.ganZhi)}</span>
                     <span className={`text-xs md:text-sm font-black ${isLifeOrMigration ? 'text-primary' : 'text-white/80'}`}>
                       {translateZiwei(palace.name)}

@@ -15,16 +15,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// 가상 데이터 (추후 DB 연동 시 대체)
-const DUMMY_REPORTS = [
-  {
-    id: "ORDER_1700000001",
-    theme: "별빛이 이야기 해주는 내 잠재력과 커리어",
-    date: "2026-06-01",
-    status: "완료",
-    themeId: "career",
-  },
-];
+const THEME_TITLES: Record<string, string> = {
+  career: "나의 잠재력과 커리어",
+  love: "나만의 매력과 관계",
+  hobby: "나를 채우는 여가와 웰니스",
+};
 
 export default async function ReportsPage() {
   const supabase = await createClient();
@@ -34,7 +29,22 @@ export default async function ReportsPage() {
     redirect("/login");
   }
 
-  const phone = authData.user.email?.replace("u", "").replace("@orbit-app.com", "") || "";
+  // 사용자의 결제 완료된 주문 내역 조회
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select(`
+      id,
+      theme,
+      created_at,
+      status,
+      reports (
+        id,
+        status
+      )
+    `)
+    .eq("user_id", authData.user.id)
+    .eq("status", "paid")
+    .order("created_at", { ascending: false });
 
   return (
     <main className="min-h-screen bg-[#05050a] py-20 px-4 relative overflow-hidden">
@@ -58,36 +68,65 @@ export default async function ReportsPage() {
         </div>
         
         <div className="space-y-4">
-          {DUMMY_REPORTS.map((report) => (
-            <Link key={report.id} href={`/reports/${report.id}?theme=${report.themeId}`}>
-              <div className="bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all group cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                    <FileText className="w-6 h-6 text-primary" />
+          {orders && orders.map((order: any) => {
+            let reportStatus = "pending";
+            
+            if (order.reports) {
+              if (Array.isArray(order.reports)) {
+                if (order.reports.length > 0) {
+                  reportStatus = order.reports[0].status;
+                }
+              } else {
+                reportStatus = order.reports.status;
+              }
+            }
+              
+            const displayStatus = 
+              reportStatus === "completed" ? "해석 완료" :
+              reportStatus === "generating" ? "해석 중" :
+              reportStatus === "failed" ? "오류" : "대기 중";
+
+            const dateStr = new Date(order.created_at).toLocaleString("ko-KR", {
+              year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+            });
+
+            return (
+              <Link key={order.id} href={`/reports/${order.id}?theme=${order.theme}`}>
+                <div className="bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all group cursor-pointer mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <FileText className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-1 group-hover:text-primary transition-colors">
+                        {THEME_TITLES[order.theme] || "나만의 별빛 이야기"}
+                      </h3>
+                      <div className="flex items-center gap-3 text-sm text-white/50">
+                        <span>{dateStr}</span>
+                        <span className="w-1 h-1 rounded-full bg-white/20"></span>
+                        <span className="truncate max-w-[120px] md:max-w-xs">주문번호: {order.id.split('-')[0]}...</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-primary transition-colors">{report.theme}</h3>
-                    <div className="flex items-center gap-3 text-sm text-white/50">
-                      <span>{report.date}</span>
-                      <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                      <span>주문번호: {report.id}</span>
+                  
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-end mt-2 md:mt-0">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                      reportStatus === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                      reportStatus === 'failed' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                      'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                    }`}>
+                      {displayStatus}
+                    </span>
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 group-hover:translate-x-1 transition-all">
+                      <ChevronRight className="w-4 h-4 text-white/60 group-hover:text-white" />
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-3 w-full md:w-auto justify-end mt-2 md:mt-0">
-                  <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-bold border border-green-500/20">
-                    {report.status}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 group-hover:translate-x-1 transition-all">
-                    <ChevronRight className="w-4 h-4 text-white/60 group-hover:text-white" />
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
 
-          {DUMMY_REPORTS.length === 0 && (
+          {(!orders || orders.length === 0) && (
             <div className="text-center py-20 bg-white/[0.01] border border-white/5 rounded-2xl">
               <p className="text-white/40">아직 해독된 방향성 기록이 없습니다.</p>
               <Link href="/">
