@@ -42,7 +42,12 @@ export async function confirmPaymentAction(params: {
   }
 
   // 2. 결제 승인 성공 시 DB 업데이트
-  const supabase = await createClient();
+  // Toss 결제 후 쿠키 유실(SameSite 이슈) 대비 및 안전한 백엔드 처리를 위해 Admin 권한 사용
+  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // (1) orders 테이블 상태 변경
   const { error: orderError } = await supabase
@@ -68,7 +73,7 @@ export async function confirmPaymentAction(params: {
     });
 
   if (paymentError) {
-    console.error("Failed to insert payment record:", paymentError);
+    console.error("Failed to insert payment record:", JSON.stringify(paymentError));
   }
 
   return { success: true, paymentData };
