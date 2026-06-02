@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { generateReportAction } from "@/app/actions/report";
 
 export async function confirmPaymentAction(params: {
   paymentKey: string;
@@ -75,6 +76,12 @@ export async function confirmPaymentAction(params: {
   if (paymentError) {
     console.error("Failed to insert payment record:", JSON.stringify(paymentError));
   }
+
+  // 3. 백그라운드 리포트 생성 트리거 (await 없이 호출하여 바로 응답 반환)
+  // Vercel 환경에서는 함수가 조기 종료될 수 있으나, 요구사항에 맞춰 비동기 호출
+  generateReportAction(orderId).catch(err => {
+    console.error("Background report generation failed:", err);
+  });
 
   return { success: true, paymentData };
 }

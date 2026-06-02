@@ -203,11 +203,7 @@ Supabase Auth(`auth.users`)와 연결되는 사용자 정보 확장 테이블입
 사주 입력 데이터, 선택 테마 및 주문의 진행 상태를 저장합니다.
 - `id` (uuid) : PK, **NOT NULL**
 - `user_id` (uuid) : FK (`users.id`), **NOT NULL**
-- `birth_date` (date) : 생년월일 (YYYY-MM-DD), **NOT NULL**
-- `birth_time` (time) : 태어난 시간, **NOT NULL** (필수 기입으로 정책 변경)
-- `gender` (varchar) : 성별 ('M', 'F'), **NOT NULL** (자미두수 명반 대운 계산용)
-- `location` (varchar) : 태어난 지역 (예: '서울/경기', '강원도' 등, 국내 지역 전용), **NOT NULL**
-- `is_lunar` (boolean) : 음력 여부, **NOT NULL** (Default: false, 양력만 지원하므로 항상 false)
+- `saju_data` (jsonb) : 생년월일, 태어난 시간, 성별, 지역, 1차 추출된 명반 별자리 데이터 등, **NOT NULL**
 - `theme` (varchar) : 선택 테마 ('career', 'love', 'hobby'), **NOT NULL**
 - `amount` (integer) : 결제 요청 금액 (진로/연애: 990원, 취미: 500원), **NOT NULL**
 - `status` (varchar) : 주문 상태 ('pending', 'paid', 'cancelled', 'refunded'), **NOT NULL** (Default: 'pending')

@@ -1,27 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock } from "lucide-react";
+import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2 } from "lucide-react";
 
 type Theme = "career" | "love" | "hobby" | string;
 
-const DUMMY_REPORT = {
-  teaser_quote: "잔잔한 수면 아래, 거대한 소용돌이를 품고 있는 당신.",
-  core_trait: "당신은 겉보기엔 누구보다 유연하고 주변과 잘 융화되는 사람입니다. 타인의 이야기를 잘 들어주며, 어디서든 적응력이 뛰어납니다. 하지만 내면에는 한 번 목표를 정하면 끝까지 파고드는 무서운 집중력과 흔들리지 않는 신념이 자리 잡고 있습니다. 특히 위기 상황에서 당신의 진가가 발휘되며, 남들이 포기할 때 조용히 해결책을 찾아내는 끈기를 보여줍니다.",
-  career_insight: "당신은 안정적인 환경보다는 자율성이 주어지고 스스로 문제를 해결할 수 있는 환경에서 폭발적으로 성장합니다. 누군가의 지시를 받기보다는, 프로젝트의 방향성을 스스로 설계할 때 가장 큰 성과를 냅니다. 기획자, 전문 연구직, 혹은 독립적인 프리랜서 성격의 직무가 당신의 강점을 극대화할 수 있습니다. 남들과 똑같은 루트를 고집하지 마세요. 당신만의 궤도를 개척할 때 가장 빛이 납니다.",
-  love_insight: "당신은 섣불리 감정을 드러내지 않지만, 한 번 마음을 연 상대에게는 한없이 깊은 헌신을 보여주는 타입입니다. 가벼운 만남보다는 서로의 성장에 도움이 되는 깊은 유대감을 선호합니다. 때로는 너무 완벽한 모습을 보여주려다 스스로 지칠 수 있으니, 당신의 약점까지도 있는 그대로 사랑해 줄 수 있는 포용력 있는 사람을 만나는 것이 중요합니다.",
-  wellness_insight: "당신의 에너지는 바깥으로 뻗어가기보다 내면으로 수렴하는 경향이 있습니다. 사람들과 어울리는 것도 좋지만, 혼자만의 시간을 가지며 방전된 에너지를 채우는 것이 절대적으로 필요합니다. 명상, 요가, 혼자 즐기는 수영, 혹은 조용히 깊이 파고들 수 있는 공예나 철학 공부 등이 당신의 심리적 안정감을 극대화해 줍니다.",
-  periodic_insight: "2026년 하반기에는 예상치 못한 제안이나 새로운 기회가 당신을 찾아올 수 있습니다. 기존의 방식에 안주하기보다는 과감하게 새로운 시도를 해보는 것을 추천합니다. 특히 10월경에는 인간관계에서 작은 전환점이 생길 수 있으니, 열린 마음으로 다가오는 인연을 맞이하세요."
-};
+interface ReportData {
+  teaser_quote: string;
+  core_trait: string;
+  theme_insight: string;
+  periodic_insight: string;
+}
 
 interface ReportContentProps {
   reportId: string;
   theme: Theme;
+  status: string;
+  content: ReportData | null;
 }
 
-export default function ReportContent({ reportId, theme }: ReportContentProps) {
+export default function ReportContent({ reportId, theme, status, content }: ReportContentProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
+
+  // 폴링(Polling) 로직: 아직 생성 중이라면 3초마다 페이지 새로고침 (서버 컴포넌트 재조회)
+  useEffect(() => {
+    if (status === "generating" || status === "pending") {
+      const interval = setInterval(() => {
+        router.refresh();
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [status, router]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -47,15 +59,40 @@ export default function ReportContent({ reportId, theme }: ReportContentProps) {
     }
   };
 
+  if (status === "failed") {
+    return (
+      <div className="w-full max-w-3xl mx-auto py-32 text-center animate-in fade-in">
+        <h2 className="text-2xl font-bold text-red-400 mb-4">리포트 생성에 실패했습니다</h2>
+        <p className="text-white/60 mb-8">AI가 별빛을 해석하는 중 알 수 없는 오류가 발생했습니다.<br/>고객센터로 문의해주시면 신속히 해결해드리겠습니다.</p>
+        <Button onClick={() => router.push("/reports")} variant="outline" className="border-white/20 text-white hover:bg-white/10">
+          보관함으로 돌아가기
+        </Button>
+      </div>
+    );
+  }
+
+  if (status !== "completed" || !content) {
+    return (
+      <div className="w-full max-w-3xl mx-auto py-40 flex flex-col items-center justify-center animate-in fade-in">
+        <div className="relative mb-8">
+          <Sparkles className="w-16 h-16 text-primary animate-pulse relative z-10" />
+          <div className="absolute inset-0 bg-primary/40 blur-2xl rounded-full animate-pulse delay-75"></div>
+        </div>
+        <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 text-center">
+          별빛을 해석하고 있습니다
+        </h2>
+        <p className="text-white/60 text-center flex items-center">
+          <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary" />
+          수천 개의 성향 데이터를 바탕으로<br className="md:hidden" /> 초개인화된 리포트를 작성 중입니다. (약 10초 소요)
+        </p>
+      </div>
+    );
+  }
+
   const specificInsightTitle = 
     theme === "career" ? "나만의 커리어 활용법" : 
     theme === "love" ? "나만의 관계 활용법" : 
     theme === "hobby" ? "나만의 라이프 활용법" : "나의 잠재력 활용법";
-
-  const specificInsightText = 
-    theme === "career" ? DUMMY_REPORT.career_insight : 
-    theme === "love" ? DUMMY_REPORT.love_insight : 
-    theme === "hobby" ? DUMMY_REPORT.wellness_insight : DUMMY_REPORT.career_insight;
 
   const InsightIcon = 
     theme === "career" ? Target : 
@@ -72,7 +109,7 @@ export default function ReportContent({ reportId, theme }: ReportContentProps) {
           <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full"></div>
         </div>
         <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 leading-relaxed">
-          "{DUMMY_REPORT.teaser_quote}"
+          "{content.teaser_quote}"
         </h2>
       </div>
 
@@ -89,8 +126,8 @@ export default function ReportContent({ reportId, theme }: ReportContentProps) {
               </div>
               <h3 className="text-xl font-bold text-white">나의 진짜 모습</h3>
             </div>
-            <p className="text-white/80 leading-relaxed md:text-lg">
-              {DUMMY_REPORT.core_trait}
+            <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
+              {content.core_trait}
             </p>
           </div>
         </div>
@@ -107,8 +144,8 @@ export default function ReportContent({ reportId, theme }: ReportContentProps) {
               </div>
               <h3 className="text-xl font-bold text-primary">{specificInsightTitle}</h3>
             </div>
-            <p className="text-white/90 leading-relaxed md:text-lg">
-              {specificInsightText}
+            <p className="text-white/90 leading-relaxed md:text-lg whitespace-pre-line">
+              {content.theme_insight}
             </p>
           </div>
         </div>
@@ -122,8 +159,8 @@ export default function ReportContent({ reportId, theme }: ReportContentProps) {
               </div>
               <h3 className="text-xl font-bold text-white">다가오는 시기의 운세 흐름</h3>
             </div>
-            <p className="text-white/80 leading-relaxed md:text-lg">
-              {DUMMY_REPORT.periodic_insight}
+            <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
+              {content.periodic_insight}
             </p>
           </div>
         </div>

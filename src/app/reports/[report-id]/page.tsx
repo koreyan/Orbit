@@ -32,10 +32,23 @@ export default async function ReportDetailPage({
   const reportId = resolvedParams["report-id"];
   const theme = (resolvedSearchParams.theme as string) || "career";
 
-  // 2. 타인 리포트 접근 차단 (권한 검증 시뮬레이션)
-  // 아직 실제 DB가 없으므로, E2E 테스트(ORDER_9999999999)용 접근만 차단하고
-  // 결제창에서 넘어온 동적 주문번호는 임시로 허용합니다.
-  const isAuthorized = reportId !== "ORDER_9999999999";
+  // 2. Report 정보 조회 (reportId는 실제로는 orderId로 넘어옴)
+  const orderId = reportId;
+  const { data: report, error: reportError } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("order_id", orderId)
+    .single();
+
+  // 타인 리포트 접근 차단 로직 (order를 조회해서 user_id 검증해야 함)
+  const { data: order } = await supabase
+    .from("orders")
+    .select("user_id, theme")
+    .eq("id", orderId)
+    .single();
+
+  const isAuthorized = order && order.user_id === authData.user.id;
+  const actualTheme = order?.theme || theme;
 
   if (!isAuthorized) {
     return (
@@ -54,13 +67,21 @@ export default async function ReportDetailPage({
     );
   }
 
+  const reportStatus = report ? report.status : "pending";
+  const reportContent = report?.content || null;
+
   return (
     <div className="relative min-h-screen pt-24 pb-12 px-4 overflow-hidden bg-[#05050a]">
       <StarBackground />
       <BackButton />
       
       <div className="relative z-10 w-full">
-        <ReportContent reportId={reportId} theme={theme} />
+        <ReportContent 
+          reportId={orderId} 
+          theme={actualTheme} 
+          status={reportStatus}
+          content={reportContent}
+        />
       </div>
     </div>
   );

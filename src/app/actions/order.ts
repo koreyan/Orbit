@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createChart } from "@orrery/core/ziwei";
+import { extractMainStars } from "@/lib/ziwei-extractor";
 
 export async function createOrderAction(params: {
   phone: string;
@@ -14,6 +16,27 @@ export async function createOrderAction(params: {
   if (!phone) {
     throw new Error("전화번호가 필요합니다.");
   }
+
+  // 1차 명반 계산 및 추출 (JSON 형태로 DB 보관)
+  let extractedStars = null;
+  try {
+    const { date, time, gender } = saju_data;
+    if (date && time && gender) {
+      const [year, month, day] = date.split("-").map(Number);
+      const [hour, minute] = time.split(":").map(Number);
+      const isMale = gender === "M";
+      const chartData = createChart(year, month, day, hour, minute, isMale);
+      extractedStars = extractMainStars(chartData);
+    }
+  } catch (err) {
+    console.error("Failed to extract stars during order creation:", err);
+    // 계속 진행합니다. (에러 발생 시 백그라운드나 리포트 조회 시 재시도 할 수 있도록)
+  }
+
+  const enrichedSajuData = {
+    ...saju_data,
+    extracted_stars: extractedStars
+  };
 
   const supabase = await createClient();
   
@@ -78,7 +101,7 @@ export async function createOrderAction(params: {
     .from("orders")
     .insert({
       user_id: userId,
-      saju_data,
+      saju_data: enrichedSajuData,
       theme,
       amount,
       status: "pending",
