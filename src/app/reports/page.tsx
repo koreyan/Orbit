@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   description: "구매하신 자미두수 분석 리포트를 확인하세요.",
 };
 
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
 // 가상 데이터 (추후 DB 연동 시 대체)
 const DUMMY_REPORTS = [
   {
@@ -23,14 +27,14 @@ const DUMMY_REPORTS = [
 ];
 
 export default async function ReportsPage() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("orbit_session");
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
 
-  if (!session?.value) {
+  if (authError || !authData?.user) {
     redirect("/login");
   }
 
-  const phone = session.value;
+  const phone = authData.user.email?.replace("u", "").replace("@orbit-app.com", "") || "";
 
   return (
     <main className="min-h-screen bg-[#05050a] py-20 px-4 relative overflow-hidden">

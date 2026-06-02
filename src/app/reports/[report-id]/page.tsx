@@ -7,6 +7,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
 export default async function ReportDetailPage({
   params,
   searchParams,
@@ -14,11 +18,11 @@ export default async function ReportDetailPage({
   params: Promise<{ "report-id": string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("orbit_session");
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
 
   // 1. 로그아웃 상태 접근 차단
-  if (!session?.value) {
+  if (authError || !authData?.user) {
     redirect("/login");
   }
 

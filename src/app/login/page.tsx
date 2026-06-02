@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "연락처와 비밀번호를 입력하여 내 별빛 이야기를 확인하세요.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[#05050a] flex items-center justify-center p-4 relative overflow-hidden">
