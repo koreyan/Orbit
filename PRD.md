@@ -93,6 +93,7 @@
   - *동기화 최적화:* 주문 정보를 백엔드에서 비동기로 완벽히 로드한 직후에 위젯을 초기화하도록 의존성 배열(Dependency Array) 렌더링 로직 개선 (무한 로딩 버그 픽스)
 - 결제 프로세스 콜백 리다이렉트 처리:
   - 승인 완료 시 `/checkout/success` (별빛 이야기 해독 준비 완료 안내 및 '내 별빛 이야기 보러가기' 버튼 렌더링)
+    - *UI 개선:* 연락처 누락 버그 해결(URL 쿼리로 상태 전달) 및 모바일 환경 주문번호 강제 개행(줄바꿈) 방지 레이아웃 적용 완료.
   - 결제 실패/취소 시 `/checkout/fail` (오류 사유 안내 및 '다시 별빛 이야기 시작하기' 버튼 렌더링)
 
 5. 내 별빛 이야기 보관함 페이지 (/reports)
@@ -100,6 +101,7 @@
 - 비회원이 로그인을 했을 때 조회할 수 있음
 - 타이틀: "내 별빛 이야기"
 - 해당 유저가 결제하여 해독된 '별빛이 이야기 해주는 내 [테마]' 리스트를 볼 수 있음
+- *보안 최적화:* Vercel 캐싱 오류(무한 로그인 리다이렉트) 방지를 위해 `supabase.auth.getUser()` 기반의 실시간 세션 검증 및 동적 렌더링(`force-dynamic`) 강제 적용 완료.
 
 6. 자미두수 결과 확인 상세 페이지(/reports/[report-id])
 - **[히어로 섹션]** 유저의 시선을 끄는 강력한 한 줄 문구(`teaser_quote`) 노출
@@ -152,6 +154,7 @@
 ### 7.1 Auth API (인증/인가)
 비회원 유저와 관리자의 인증 상태를 관리합니다. (Server Actions로 구현됨)
 - `loginAction` : 비회원 로그인 (전화번호, 비밀번호 기반 검증, 5회 실패 시 5분 잠금 및 Supabase 세션 자동 발급)
+  - *개선사항:* Client Component의 `try-catch` 블록 내에서 Server Action의 `redirect()` 호출 시 발생하는 `NEXT_REDIRECT` 에러를 방지하기 위해 성공 여부(`success: true`)만 반환하고 라우팅은 클라이언트 위임 처리.
 - `logoutAction` : 로그아웃 및 세션 파기
 - `adminLoginAction` : 관리자 로그인 (관리자 권한 검증 및 세션 발급)
 
@@ -164,6 +167,7 @@
 - `createOrderAction`: 전화번호와 비밀번호를 받아 가상 이메일(`u{phone}@orbit-app.com`) 및 패딩된 비밀번호(`{password}_orbit`)로 백그라운드 회원가입/로그인(이메일 인증 우회)을 처리한 뒤, `public.orders`에 `pending` 상태의 주문을 생성합니다.
 - `getOrderAction`: `orderId`를 기반으로 결제 금액과 테마 등 주문서 상세 정보를 조회하여 클라이언트(결제창)에 전달합니다.
 - `confirmPaymentAction`: 토스페이먼츠 결제창(위젯) 인증 통과 후 리다이렉트되는 성공 페이지에서 호출되며, 서버 대 서버로 Toss Confirm API를 호출하여 결제를 승인하고 `orders`와 `payments` 테이블을 업데이트합니다. (Toss 리다이렉트에 의한 쿼리 파라미터 중복/배열화 문제 방어 처리 포함)
+  - *보안/안정성:* 3rd Party 결제 모듈(Toss) 리다이렉트 시 브라우저 정책(SameSite)으로 인해 발생하는 세션 유실 및 RLS(Row Level Security) 접근 제한 에러 방지를 위해, 결제 검증 후 DB 업데이트 시 Admin Client(`SERVICE_ROLE_KEY`)를 사용하여 강제 업데이트 처리.
 
 ### 7.4 Payments API (결제 연동)
 토스페이먼츠(v2 SDK)와의 결제 승인 및 검증 로직을 처리합니다.
