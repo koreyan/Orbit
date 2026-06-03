@@ -47,7 +47,7 @@ export async function confirmPaymentAction(params: {
 
     if (!isAlreadyProcessed) {
       // 텔레그램 알림: 결제 승인 실패
-      sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
+      await sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
     }
     
     throw new Error(paymentData.message || "결제 승인 중 오류가 발생했습니다.");
@@ -89,7 +89,7 @@ export async function confirmPaymentAction(params: {
   }
 
   // 텔레그램 알림: 결제 성공
-  sendTelegramNotification(`✅ <b>[결제 성공]</b>\n주문번호: <code>${orderId}</code>\n금액: ${paymentData.totalAmount}원\n수단: ${paymentData.method}`);
+  await sendTelegramNotification(`✅ <b>[결제 성공]</b>\n주문번호: <code>${orderId}</code>\n금액: ${paymentData.totalAmount}원\n수단: ${paymentData.method}`);
 
   // 백그라운드 리포트 생성 트리거 제거 (Vercel Serverless Function 생명주기 문제로 인해 클라이언트에서 직접 호출하도록 변경)
 
