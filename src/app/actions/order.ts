@@ -70,7 +70,7 @@ export async function createOrderAction(params: {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes("already registered") || signUpError.message.includes("Email exists")) {
+        if (signUpError.message.includes("already been registered") || signUpError.message.includes("already registered") || signUpError.message.includes("Email exists")) {
           // 신규 유저가 아니며 비밀번호가 틀린 경우: 입력된 새 비밀번호로 덮어씁니다.
           const { data: existingUser } = await adminClient.from('users').select('id').eq('phone_number', phone).single();
           
