@@ -71,19 +71,42 @@ export async function createOrderAction(params: {
 
       if (signUpError) {
         if (signUpError.message.includes("already registered") || signUpError.message.includes("Email exists")) {
-          throw new Error("이미 등록된 번호입니다. 비밀번호를 다시 확인해주세요.");
-        }
-        throw new Error(`회원가입 실패: ${signUpError.message}`);
-      }
+          // 신규 유저가 아니며 비밀번호가 틀린 경우: 입력된 새 비밀번호로 덮어씁니다.
+          const { data: existingUser } = await adminClient.from('users').select('id').eq('phone_number', phone).single();
+          
+          if (existingUser) {
+            // 비밀번호 강제 갱신
+            await adminClient.auth.admin.updateUserById(existingUser.id, { password: defaultPassword });
+            
+            // 갱신된 비밀번호로 다시 로그인 시도
+            const { data: retrySignInData, error: retryError } = await supabase.auth.signInWithPassword({
+              email: dummyEmail,
+              password: defaultPassword,
+            });
 
-      // 생성 직후 로그인 처리하여 쿠키 세션 발급
-      await supabase.auth.signInWithPassword({
-        email: dummyEmail,
-        password: defaultPassword,
-      });
-      
-      if (signUpData.user) {
-        userId = signUpData.user.id;
+            if (retryError) {
+              throw new Error(`비밀번호 갱신 후 로그인 실패: ${retryError.message}`);
+            }
+            
+            if (retrySignInData.user) {
+              userId = retrySignInData.user.id;
+            }
+          } else {
+            throw new Error("유저 정보를 찾을 수 없습니다.");
+          }
+        } else {
+          throw new Error(`회원가입 실패: ${signUpError.message}`);
+        }
+      } else {
+        // 회원가입 성공 시 로그인 처리
+        await supabase.auth.signInWithPassword({
+          email: dummyEmail,
+          password: defaultPassword,
+        });
+        
+        if (signUpData.user) {
+          userId = signUpData.user.id;
+        }
       }
     } else {
       throw new Error(`로그인 실패: ${signInError.message}`);
