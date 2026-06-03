@@ -91,11 +91,7 @@ export async function confirmPaymentAction(params: {
   // 텔레그램 알림: 결제 성공
   sendTelegramNotification(`✅ <b>[결제 성공]</b>\n주문번호: <code>${orderId}</code>\n금액: ${paymentData.totalAmount}원\n수단: ${paymentData.method}`);
 
-  // 3. 백그라운드 리포트 생성 트리거 (await 없이 호출하여 바로 응답 반환)
-  // Vercel 환경에서는 함수가 조기 종료될 수 있으나, 요구사항에 맞춰 비동기 호출
-  generateReportAction(orderId).catch(err => {
-    console.error("Background report generation failed:", err);
-  });
+  // 백그라운드 리포트 생성 트리거 제거 (Vercel Serverless Function 생명주기 문제로 인해 클라이언트에서 직접 호출하도록 변경)
 
   return { success: true, paymentData };
 }

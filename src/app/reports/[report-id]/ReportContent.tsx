@@ -21,19 +21,38 @@ interface ReportContentProps {
   content: ReportData | null;
 }
 
+import { generateReportAction } from "@/app/actions/report";
+
 export default function ReportContent({ reportId, theme, status, content }: ReportContentProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
 
-  // 폴링(Polling) 로직: 아직 생성 중이라면 3초마다 페이지 새로고침 (서버 컴포넌트 재조회)
+  // 폴링(Polling) 및 생성 트리거 로직
   useEffect(() => {
-    if (status === "generating" || status === "pending") {
-      const interval = setInterval(() => {
+    let interval: NodeJS.Timeout;
+
+    if (status === "pending") {
+      // Vercel Serverless 환경에서 백그라운드 태스크가 조기 종료되는 문제를 방지하기 위해,
+      // 클라이언트(브라우저)에서 명시적으로 Server Action을 호출하여 HTTP 연결을 유지시킵니다.
+      generateReportAction(reportId).then(() => {
+        router.refresh();
+      }).catch(err => {
+        console.error("Report generation error:", err);
+      });
+      
+      interval = setInterval(() => {
         router.refresh();
       }, 3000);
-      return () => clearInterval(interval);
+    } else if (status === "generating") {
+      interval = setInterval(() => {
+        router.refresh();
+      }, 3000);
     }
-  }, [status, router]);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [status, reportId, router]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
