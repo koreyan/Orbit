@@ -72,11 +72,18 @@ export async function createOrderAction(params: {
       if (signUpError) {
         if (signUpError.message.includes("already been registered") || signUpError.message.includes("already registered") || signUpError.message.includes("Email exists")) {
           // 신규 유저가 아니며 비밀번호가 틀린 경우: 입력된 새 비밀번호로 덮어씁니다.
-          const { data: existingUser } = await adminClient.from('users').select('id').eq('phone_number', phone).single();
           
-          if (existingUser) {
+          // 이메일을 통해 기존 유저의 ID를 확실하게 찾기 위해 generateLink 활용 (public.users의 phone_number가 unknown일 수 있음)
+          const { data: linkData } = await adminClient.auth.admin.generateLink({
+            type: 'magiclink',
+            email: dummyEmail
+          });
+          
+          const existingUserId = linkData?.user?.id;
+          
+          if (existingUserId) {
             // 비밀번호 강제 갱신
-            await adminClient.auth.admin.updateUserById(existingUser.id, { password: defaultPassword });
+            await adminClient.auth.admin.updateUserById(existingUserId, { password: defaultPassword });
             
             // 갱신된 비밀번호로 다시 로그인 시도
             const { data: retrySignInData, error: retryError } = await supabase.auth.signInWithPassword({
