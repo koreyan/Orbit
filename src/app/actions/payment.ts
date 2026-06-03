@@ -40,8 +40,16 @@ export async function confirmPaymentAction(params: {
 
   if (!response.ok) {
     console.error("Toss Payment Confirm Error:", paymentData);
-    // 텔레그램 알림: 결제 승인 실패
-    sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
+    
+    const isAlreadyProcessed = 
+      paymentData.code === "ALREADY_PROCESSED_PAYMENT" || 
+      (paymentData.message && paymentData.message.includes("이미 처리된"));
+
+    if (!isAlreadyProcessed) {
+      // 텔레그램 알림: 결제 승인 실패
+      sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
+    }
+    
     throw new Error(paymentData.message || "결제 승인 중 오류가 발생했습니다.");
   }
 

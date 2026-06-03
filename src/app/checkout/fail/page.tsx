@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "결제 실패 - Orbit",
@@ -11,6 +12,11 @@ export default async function CheckoutFailPage({ searchParams }: { searchParams:
   const params = await searchParams;
   const message = params.message || "알 수 없는 오류가 발생했습니다.";
   const code = params.code || "UNKNOWN_ERROR";
+
+  // 이미 처리된 결제인 경우 랜딩 페이지로 자동 리다이렉트
+  if (code === "ALREADY_PROCESSED_PAYMENT" || message.includes("이미 처리된")) {
+    redirect("/");
+  }
 
   return (
     <main className="min-h-screen bg-[#05050a] flex items-center justify-center p-4">
