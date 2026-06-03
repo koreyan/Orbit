@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { filterThemePalaces, findLuStarPalaces } from "@/lib/ziwei-extractor";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 
 export async function generateReportAction(orderId: string) {
@@ -279,6 +280,8 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
       console.error(`Gemini API 호출 실패 (시도 ${attempt}):`, error);
       if (attempt >= MAX_RETRIES) {
         await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
+        // 텔레그램 알림: 리포트 생성 실패
+        sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${reportId}</code>\n사유: Gemini API 최대 재시도 횟수 초과\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
         throw new Error("리포트 생성에 실패했습니다. (최대 재시도 횟수 초과)");
       }
       // 재시도 전 1.5초 대기 (백오프)
@@ -293,6 +296,9 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
       status: "completed",
       generated_at: new Date().toISOString()
     }).eq("id", reportId);
+
+    // 텔레그램 알림: 리포트 생성 성공
+    sendTelegramNotification(`✨ <b>[리포트 생성 완료]</b>\n주문번호: <code>${reportId}</code>\nAI가 성공적으로 별빛 이야기를 해독했습니다!`);
 
     return { success: true, reportId };
   }

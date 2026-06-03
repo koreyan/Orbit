@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { generateReportAction } from "@/app/actions/report";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 export async function confirmPaymentAction(params: {
   paymentKey: string;
@@ -39,6 +40,8 @@ export async function confirmPaymentAction(params: {
 
   if (!response.ok) {
     console.error("Toss Payment Confirm Error:", paymentData);
+    // 텔레그램 알림: 결제 승인 실패
+    sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
     throw new Error(paymentData.message || "결제 승인 중 오류가 발생했습니다.");
   }
 
@@ -76,6 +79,9 @@ export async function confirmPaymentAction(params: {
   if (paymentError) {
     console.error("Failed to insert payment record:", JSON.stringify(paymentError));
   }
+
+  // 텔레그램 알림: 결제 성공
+  sendTelegramNotification(`✅ <b>[결제 성공]</b>\n주문번호: <code>${orderId}</code>\n금액: ${paymentData.totalAmount}원\n수단: ${paymentData.method}`);
 
   // 3. 백그라운드 리포트 생성 트리거 (await 없이 호출하여 바로 응답 반환)
   // Vercel 환경에서는 함수가 조기 종료될 수 있으나, 요구사항에 맞춰 비동기 호출
