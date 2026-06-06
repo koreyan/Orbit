@@ -38,8 +38,11 @@ export default function LoginClient() {
       
       // Server Action 호출
       const result = await loginAction(formData);
-      if (result.success) {
+      if (result?.success) {
         router.push("/reports");
+      } else {
+        setError(result?.error || "로그인에 실패했습니다.");
+        setIsLoading(false);
       }
     } catch (err: any) {
       setError(err.message || "로그인에 실패했습니다.");

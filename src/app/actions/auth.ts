@@ -12,7 +12,7 @@ export async function loginAction(formData: FormData) {
   const password = formData.get("password") as string;
 
   if (!phone || !password) {
-    throw new Error("전화번호와 비밀번호를 모두 입력해주세요.");
+    return { success: false, error: "전화번호와 비밀번호를 모두 입력해주세요." };
   }
 
   // [보안] 브루트포스 방어 로직 시뮬레이션 (메모리 캐시)
@@ -22,7 +22,7 @@ export async function loginAction(formData: FormData) {
 
   if (attempt.lockUntil > now) {
     const remainMin = Math.ceil((attempt.lockUntil - now) / 60000);
-    throw new Error(`비정상적인 로그인 시도가 감지되었습니다. ${remainMin}분 후에 다시 시도해주세요.`);
+    return { success: false, error: `비정상적인 로그인 시도가 감지되었습니다. ${remainMin}분 후에 다시 시도해주세요.` };
   }
 
   const supabase = await createClient();
@@ -42,11 +42,11 @@ export async function loginAction(formData: FormData) {
     if (attempt.count >= 5) {
       attempt.lockUntil = now + 5 * 60 * 1000; // 5분 잠금
       loginAttempts.set(ip, attempt);
-      throw new Error("비정상적인 로그인 시도가 감지되었습니다. 5분 후에 다시 시도해주세요.");
+      return { success: false, error: "비정상적인 로그인 시도가 감지되었습니다. 5분 후에 다시 시도해주세요." };
     }
     loginAttempts.set(ip, attempt);
     
-    throw new Error("일치하는 별빛 이야기가 없습니다. 입력하신 정보를 다시 확인해주세요.");
+    return { success: false, error: "일치하는 별빛 이야기가 없습니다. 입력하신 정보를 다시 확인해주세요." };
   }
 
   // 로그인 성공 시 카운트 초기화

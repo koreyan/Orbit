@@ -256,9 +256,51 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
   let success = false;
   let parsedContent = null;
 
+  // E2E 테스트용 모킹 분기
+  if (order.saju_data?.e2e_mock_gemini?.startsWith('success_prompt')) {
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        fs.writeFileSync(
+          path.join(process.cwd(), ".gemini_mock.log"), 
+          JSON.stringify({ systemPrompt, userContext }, null, 2)
+        );
+      } catch (e) {
+        // ignore
+      }
+    }
+    parsedContent = {
+      teaser_quote: `Mock Teaser for ${theme}`,
+      core_trait: "Mock Core Trait",
+      theme_insight: "Mock Theme Insight",
+      periodic_insight: "Mock Periodic Insight"
+    };
+    success = true;
+  }
+
   while (attempt < MAX_RETRIES && !success) {
     try {
       attempt++;
+
+      // E2E 테스트용 재시도/실패 모킹
+      if (order.saju_data?.e2e_mock_gemini === 'fail_retry_success') {
+        if (attempt < 4) {
+          throw new Error(`Simulated AI Error (Attempt ${attempt})`);
+        } else {
+          parsedContent = {
+            teaser_quote: "Recovered",
+            core_trait: "Recovered successfully",
+            theme_insight: "Recovered insight",
+            periodic_insight: "Recovered periodic"
+          };
+          success = true;
+          continue;
+        }
+      } else if (order.saju_data?.e2e_mock_gemini === 'fail_max_retries') {
+        throw new Error(`Simulated Permanent AI Error (Attempt ${attempt})`);
+      }
+
       console.log(`Gemini API 호출 시도 (${attempt}/${MAX_RETRIES})...`);
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
       const model = genAI.getGenerativeModel({
@@ -311,4 +353,30 @@ function formatPalaceStars(palace: any): string {
   const lucky = palace.luckyStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
   const unlucky = palace.unluckyStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
   return `핵심 에너지: [${major || '비어있음'}], 보조 에너지: [${lucky || '없음'}], 주의할 에너지: [${unlucky || '없음'}]`;
+}
+
+export async function makeReportPublic(orderId: string) {
+  const { createClient: createServerClient } = await import('@/lib/supabase/server');
+  const supabase = await createServerClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return { success: false, error: "Unauthorized" };
+
+  // Verify ownership
+  const { data: order } = await supabase.from("orders").select("user_id").eq("id", orderId).single();
+  if (!order || order.user_id !== userData.user.id) return { success: false, error: "Forbidden" };
+
+  // Update using adminClient to bypass RLS for the update itself
+  const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { error } = await adminClient.from("reports").update({ is_public: true }).eq("order_id", orderId);
+  if (error) {
+    console.error("makeReportPublic error:", error);
+    return { success: false, error: "Update failed" };
+  }
+
+  return { success: true };
 }

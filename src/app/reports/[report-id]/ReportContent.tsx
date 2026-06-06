@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2 } from "lucide-react";
+import { makeReportPublic } from "@/app/actions/report";
+import ReactMarkdown from "react-markdown";
 
 type Theme = "career" | "love" | "hobby" | string;
 
@@ -54,8 +56,22 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
     }
   }, [status, reportId, router]);
 
-  const handleCopyLink = () => {
+  const [isMakingPublic, setIsMakingPublic] = useState(false);
+
+  const handleMakePublic = async () => {
+    if (!isMakingPublic) {
+      setIsMakingPublic(true);
+      try {
+        await makeReportPublic(reportId);
+      } catch (e) {
+        console.error("Failed to make public", e);
+      }
+    }
+  };
+
+  const handleCopyLink = async () => {
     if (typeof window !== "undefined") {
+      await handleMakePublic();
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -63,6 +79,7 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
   };
 
   const handleShare = async () => {
+    await handleMakePublic();
     if (navigator.share) {
       try {
         await navigator.share({

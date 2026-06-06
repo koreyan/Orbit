@@ -25,7 +25,6 @@ export default async function ReportDetailPage({
   const reportId = resolvedParams["report-id"];
   const theme = (resolvedSearchParams.theme as string) || "career";
 
-  // Public 접근을 허용하기 위해 adminClient를 사용하여 RLS 우회 (링크를 가진 사람은 누구나 볼 수 있도록)
   const { createClient: createAdminClient } = await import('@supabase/supabase-js');
   const adminClient = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,19 +32,37 @@ export default async function ReportDetailPage({
   );
 
   const orderId = reportId;
-  const { data: report } = await adminClient
+
+  // 1. 일반 클라이언트로 권한 체크 및 리포트 조회 (RLS 적용)
+  const { data: report } = await supabase
     .from("reports")
     .select("*")
     .eq("order_id", orderId)
     .single();
 
+  if (!report) {
+    // 2. 권한이 없어서 안보이는 건지 진짜 없는 건지 확인 (Admin 우회)
+    const { data: realReport } = await adminClient
+      .from("reports")
+      .select("is_public")
+      .eq("order_id", orderId)
+      .single();
+
+    if (realReport) {
+      // 데이터는 존재하지만 RLS에 의해 막힘 = 권한 없는 타인 접근
+      redirect("/reports/forbidden");
+    }
+  }
+
+  // 3. 리포트 열람 권한을 통과했다면, 테마 정보는 Admin으로 가져옴 
+  // (orders 테이블 RLS 무한참조를 끊기 위한 안전망)
   const { data: order } = await adminClient
     .from("orders")
     .select("theme")
     .eq("id", orderId)
     .single();
 
-  if (!order) {
+  if (!report || !order) {
     return (
       <div className="min-h-screen bg-[#05050a] flex items-center justify-center p-4">
         <div className="text-center bg-white/[0.02] border border-red-500/20 rounded-3xl p-8 max-w-md w-full shadow-2xl backdrop-blur-xl">

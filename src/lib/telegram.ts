@@ -6,6 +6,17 @@ export async function sendTelegramNotification(message: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
+  // E2E 테스트 및 로컬 개발용: 알림 텍스트를 임시 파일로 배출하여 테스트 러너가 추적할 수 있게 함
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      fs.writeFileSync(path.join(process.cwd(), ".telegram_mock.log"), message);
+    } catch (e) {
+      // ignore
+    }
+  }
+
   if (!botToken || !chatId) {
     console.warn("Telegram 설정이 누락되어 알림을 전송하지 않습니다.");
     return;
