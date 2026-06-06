@@ -323,7 +323,7 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
       if (attempt >= MAX_RETRIES) {
         await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
         // 텔레그램 알림: 리포트 생성 실패
-        await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${reportId}</code>\n사유: Gemini API 최대 재시도 횟수 초과\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+        await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${orderId}</code>\n사유: Gemini API 최대 재시도 횟수 초과\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
         throw new Error("리포트 생성에 실패했습니다. (최대 재시도 횟수 초과)");
       }
       // 재시도 전 1.5초 대기 (백오프)
@@ -340,7 +340,7 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
     }).eq("id", reportId);
 
     // 텔레그램 알림: 리포트 생성 성공
-    await sendTelegramNotification(`✨ <b>[리포트 생성 완료]</b>\n주문번호: <code>${reportId}</code>\nAI가 성공적으로 별빛 이야기를 해독했습니다!`);
+    await sendTelegramNotification(`✨ <b>[리포트 생성 완료]</b>\n주문번호: <code>${orderId}</code>\nAI가 성공적으로 별빛 이야기를 해독했습니다!`);
 
     return { success: true, reportId };
   }

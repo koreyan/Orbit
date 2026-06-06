@@ -62,7 +62,7 @@ export default async function ReportDetailPage({
     .eq("id", orderId)
     .single();
 
-  if (!report || !order) {
+  if (!order) {
     return (
       <div className="min-h-screen bg-[#05050a] flex items-center justify-center p-4">
         <div className="text-center bg-white/[0.02] border border-red-500/20 rounded-3xl p-8 max-w-md w-full shadow-2xl backdrop-blur-xl">
