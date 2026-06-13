@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 import { createClient } from "@/lib/supabase/server";
+import ClientDate from "@/components/ClientDate";
 
 export const dynamic = "force-dynamic";
 
@@ -86,10 +87,6 @@ export default async function ReportsPage() {
               reportStatus === "generating" ? "해석 중" :
               reportStatus === "failed" ? "오류" : "대기 중";
 
-            const dateStr = new Date(order.created_at).toLocaleString("ko-KR", {
-              year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
-            });
-
             return (
               <Link key={order.id} href={`/reports/${order.id}?theme=${order.theme}`}>
                 <div className="bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all group cursor-pointer mb-4">
@@ -102,7 +99,7 @@ export default async function ReportsPage() {
                         {THEME_TITLES[order.theme] || "나만의 별빛 이야기"}
                       </h3>
                       <div className="flex items-center gap-3 text-sm text-white/50">
-                        <span>{dateStr}</span>
+                        <ClientDate dateString={order.created_at} />
                         <span className="w-1 h-1 rounded-full bg-white/20"></span>
                         <span className="truncate max-w-[120px] md:max-w-xs">주문번호: {order.id.split('-')[0]}...</span>
                       </div>
