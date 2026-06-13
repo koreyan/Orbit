@@ -113,15 +113,15 @@ export default function ResultClient({
                 // Center 2x2 Area
                 if (idx === 5) {
                   return (
-                    <div key="center" className="col-span-2 row-span-2 flex flex-col items-center justify-center bg-black/20 rounded-2xl border border-white/5 p-4 text-center">
-                      <div className="space-y-3">
-                        <div className="inline-block px-4 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30 text-sm font-semibold mb-2">
+                    <div key="center" className="col-span-2 row-span-2 flex flex-col items-center justify-center bg-black/20 rounded-2xl border border-white/5 p-2 md:p-4 text-center overflow-hidden">
+                      <div className="space-y-1 md:space-y-3 w-full px-1">
+                        <div className="inline-block px-2 py-0.5 md:px-4 md:py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30 text-[9px] md:text-sm font-semibold mb-1 md:mb-2 whitespace-nowrap">
                           {translateZiwei(chartData.wuXingJu.name)}
                         </div>
-                        <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                        <h2 className="text-[11px] sm:text-xs md:text-xl lg:text-2xl font-bold text-white mb-1 md:mb-2 whitespace-nowrap">
                           {chartData.solarYear}년 {chartData.solarMonth}월 {chartData.solarDay}일
                         </h2>
-                        <div className="text-white/60 text-sm md:text-base space-y-1">
+                        <div className="text-white/60 text-[9px] sm:text-[10px] md:text-base space-y-0.5 md:space-y-1 whitespace-nowrap">
                           <p>시간: {chartData.hour}시 {chartData.minute}분</p>
                           <p>명궁: {translateZiwei(chartData.mingGongZhi)}</p>
                         </div>
@@ -146,7 +146,7 @@ export default function ResultClient({
                 <div 
                   key={idx} 
                   className={`
-                    relative aspect-square flex flex-col p-2 md:p-3 rounded-xl md:rounded-2xl 
+                    relative aspect-square flex flex-col p-1 md:p-3 rounded-xl md:rounded-2xl 
                     bg-white/[0.02] backdrop-blur-sm transition-all duration-300
                     ${isLiuNianMing ? 'border-2 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] z-10 scale-[1.02]' : 
                       isDaHanMing ? 'border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] z-10 scale-[1.02]' : 
@@ -155,52 +155,52 @@ export default function ResultClient({
                 >
                   {/* 배지 렌더링 */}
                   {isDaHanMing && (
-                    <div className="absolute -top-2 left-2 bg-amber-500 text-black text-[9px] md:text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-20">
+                    <div className="absolute -top-2 md:-top-3 left-1 md:left-2 bg-amber-500 text-black text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded shadow-lg z-20">
                       10년운
                     </div>
                   )}
                   {isLiuNianMing && (
-                    <div className="absolute -top-2 right-2 bg-emerald-500 text-black text-[9px] md:text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-20">
+                    <div className="absolute -top-2 md:-top-3 right-1 md:right-2 bg-emerald-500 text-black text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded shadow-lg z-20">
                       1년운
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar">
+                  <div className="flex-1 flex flex-col gap-0.5 md:gap-1 overflow-y-auto no-scrollbar min-h-0 pt-1 md:pt-0">
                     
                     {/* 주성 (Major Stars) */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-0.5 md:gap-1">
                       {palace.stars.filter((s: any) => MAJOR_STARS.includes(s.name)).map((star: any, sIdx: number) => (
-                        <span key={`m-${sIdx}`} className="text-xs md:text-sm font-bold text-amber-400 leading-none flex items-center">
+                        <span key={`m-${sIdx}`} className="text-[10px] md:text-sm font-bold text-amber-400 leading-tight flex flex-wrap items-center">
                           {translateZiwei(star.name)}
-                          {star.siHua && <span className="text-[10px] bg-white/20 text-white rounded px-1 ml-1">[{translateZiwei(star.siHua)}]</span>}
+                          {star.siHua && <span className="text-[8px] md:text-[10px] bg-white/20 text-white rounded px-0.5 md:px-1 ml-0.5 md:ml-1">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
 
                     {/* 길성 (Lucky Stars) */}
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-0.5 md:gap-1 mt-0.5 md:mt-1">
                       {palace.stars.filter((s: any) => LUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
-                        <span key={`l-${sIdx}`} className="text-[10px] md:text-xs font-semibold text-emerald-400 leading-none flex items-center">
+                        <span key={`l-${sIdx}`} className="text-[8px] md:text-xs font-semibold text-emerald-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
-                          {star.siHua && <span className="text-[9px] bg-white/20 text-white rounded px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                          {star.siHua && <span className="text-[7px] md:text-[9px] bg-white/20 text-white rounded px-0.5 md:px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
 
                     {/* 흉성 (Unlucky Stars) */}
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-0.5 md:gap-1 mt-0.5 md:mt-1">
                       {palace.stars.filter((s: any) => UNLUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
-                        <span key={`u-${sIdx}`} className="text-[10px] md:text-xs font-semibold text-rose-400 leading-none flex items-center">
+                        <span key={`u-${sIdx}`} className="text-[8px] md:text-xs font-semibold text-rose-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
-                          {star.siHua && <span className="text-[9px] bg-white/20 text-white rounded px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
+                          {star.siHua && <span className="text-[7px] md:text-[9px] bg-white/20 text-white rounded px-0.5 md:px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
                         </span>
                       ))}
                     </div>
 
                   </div>
-                  <div className="mt-2 flex items-end justify-between w-full border-t border-white/5 pt-1">
-                    <span className="text-[9px] md:text-[10px] text-white/40">{translateZiwei(palace.ganZhi)}</span>
-                    <span className={`text-xs md:text-sm font-black ${isLifeOrMigration ? 'text-primary' : 'text-white/80'}`}>
+                  <div className="mt-auto flex items-end justify-between w-full border-t border-white/5 pt-0.5 md:pt-1 shrink-0">
+                    <span className="text-[8px] md:text-[10px] text-white/40 leading-none">{translateZiwei(palace.ganZhi)}</span>
+                    <span className={`text-[9px] md:text-sm font-black leading-none ${isLifeOrMigration ? 'text-primary' : 'text-white/80'}`}>
                       {translateZiwei(palace.name)}
                     </span>
                   </div>
@@ -531,10 +531,10 @@ export default function ResultClient({
 
           <Button 
             onClick={handleNext}
-            className="w-full h-14 mt-6 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all relative overflow-hidden group"
+            className="w-full h-12 md:h-14 mt-6 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-sm sm:text-base md:text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all relative overflow-hidden group px-2 md:px-4"
           >
-            <Sparkles className="mr-2 w-5 h-5" />
-            선택한 테마의 내 별빛 이야기 들어보기
+            <Sparkles className="mr-1.5 md:mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="truncate">선택한 테마의 내 별빛 이야기 들어보기</span>
             <div className="absolute inset-0 bg-white/20 w-full translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite] skew-x-[-20deg]" />
           </Button>
         </div>
