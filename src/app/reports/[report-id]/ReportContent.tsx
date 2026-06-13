@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2 } from "lucide-react";
+import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2, RefreshCcw } from "lucide-react";
 import { makeReportPublic } from "@/app/actions/report";
 import ReactMarkdown from "react-markdown";
 
@@ -28,6 +28,7 @@ import { generateReportAction } from "@/app/actions/report";
 export default function ReportContent({ reportId, theme, status, content }: ReportContentProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // 폴링(Polling) 및 생성 트리거 로직
   useEffect(() => {
@@ -95,14 +96,33 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
     }
   };
 
+  const handleRegenerate = async () => {
+    setIsRegenerating(true);
+    try {
+      await generateReportAction(reportId);
+      router.refresh();
+    } catch (err) {
+      console.error("Regeneration failed", err);
+      alert("글 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   if (status === "failed") {
     return (
       <div className="w-full max-w-3xl mx-auto py-32 text-center animate-in fade-in">
         <h2 className="text-2xl font-bold text-red-400 mb-4">리포트 생성에 실패했습니다</h2>
-        <p className="text-white/60 mb-8">AI가 별빛을 해석하는 중 알 수 없는 오류가 발생했습니다.<br/>고객센터로 문의해주시면 신속히 해결해드리겠습니다.</p>
-        <Button onClick={() => router.push("/reports")} variant="outline" className="border-white/20 text-white hover:bg-white/10">
-          보관함으로 돌아가기
-        </Button>
+        <p className="text-white/60 mb-8">AI가 별빛을 해석하는 중 오류가 발생했습니다.<br/>아래 버튼을 눌러 다시 시도해주시거나 고객센터로 문의해주세요.</p>
+        <div className="flex gap-4 justify-center">
+          <Button onClick={handleRegenerate} disabled={isRegenerating} className="bg-primary hover:bg-orange-500 text-white rounded-xl h-11 px-6">
+            {isRegenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCcw className="w-4 h-4 mr-2" />}
+            글 재생성하기
+          </Button>
+          <Button onClick={() => router.push("/reports")} variant="outline" className="border-white/20 text-white hover:bg-white/10 h-11 px-6">
+            보관함으로 돌아가기
+          </Button>
+        </div>
       </div>
     );
   }

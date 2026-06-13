@@ -169,13 +169,14 @@ ${luPalaces.map(p => `- ${p.name}궁: ${formatPalaceStars(p)}`).join("\n")}
 1. "자미두수", "명궁", "관록궁", "재백궁", "주성", "살성", "화기", "차성안궁" 등 모든 명리학적 전문 용어와 한자어의 출력을 100% 절대 금지합니다.
 2. 유저의 데이터에 있는 "태양성", "천동성" 같은 별 이름도 직접 언급하지 마세요. 대신 그 별이 가진 "기질(예: 따뜻한 오지라퍼, 타고난 리더)"로 완벽히 치환하여 설명하세요.
 3. 제공된 보조성(길성/흉성)과 사화 에너지를 분석에 녹여내어, 단점도 긍정적이고 건설적인 방향으로 승화할 수 있도록 조언하세요.
+4. 모든 JSON 속성의 값(Value)은 반드시 "단일 문자열(String)"이어야 합니다. 중첩된 객체(Object)나 배열(Array)을 절대 생성하지 마세요.
 
 다음 JSON 스키마를 엄격히 준수하여 응답하세요. 다른 텍스트는 출력하지 마세요.
 {
-  "teaser_quote": "마치 MBTI 결과처럼 직관적이고 톡톡 튀는 한 줄 요약",
-  "core_trait": "유저의 타고난 본질과 장점, 매력을 친구에게 칭찬하듯 설명하는 3~4문단",
-  "theme_insight": "테마에 맞춘 구체적이고 현실적인 액션 플랜 (3~4문단)",
-  "periodic_insight": "[현재 10년 운]과 [올해의 1년 운] 데이터를 바탕으로 날씨에 비유한 구체적인 시기별 예측 (2~3문단)"
+  "teaser_quote": "마치 MBTI 결과처럼 직관적이고 톡톡 튀는 한 줄 요약 (String)",
+  "core_trait": "유저의 타고난 본질과 장점, 매력을 친구에게 칭찬하듯 설명하는 3~4문단 (String)",
+  "theme_insight": "테마에 맞춘 구체적이고 현실적인 액션 플랜 (3~4문단) (String)",
+  "periodic_insight": "[현재 10년 운]과 [올해의 1년 운] 데이터를 바탕으로 날씨에 비유한 구체적인 시기별 예측 (2~3문단) (String)"
 }`;
 
   const themePromptMap: Record<string, string> = {
@@ -184,9 +185,9 @@ ${luPalaces.map(p => `- ${p.name}궁: ${formatPalaceStars(p)}`).join("\n")}
 
 [커리어 테마 특수 지침]
 1. core_trait에서는 유저의 타고난 업무 스타일, 리더십 유형, 재물을 다루는 감각을 설명하세요.
-2. theme_insight에서는 반드시 아래 두 가지를 포함하세요:
-   a) 나의 최적화된 업무 스탠스: 관록궁/재백궁 데이터 기반으로 어떤 환경에서 능력을 극대화하는지.
-   b) 나만의 숨겨진 금광: [숨겨진 금광 위치] 데이터가 있다면 그것을 바탕으로, "당신의 진짜 돈은 OOO에서 나옵니다"라고 구체적인 타겟 시장이나 비즈니스 모델(예: 대중/팬덤 기반, 부동산/공간 기반, 대기업/기관 기반, 콘텐츠/교육 기반 등)을 제시하세요.
+2. theme_insight에서는 반드시 아래 두 가지 내용을 자연스럽게 이어서 하나의 문자열(String)로 작성하세요:
+   - 나의 최적화된 업무 스탠스: 관록궁/재백궁 데이터 기반으로 어떤 환경에서 능력을 극대화하는지.
+   - 나만의 숨겨진 금광: [숨겨진 금광 위치] 데이터가 있다면 그것을 바탕으로, "당신의 진짜 돈은 OOO에서 나옵니다"라고 구체적인 타겟 시장이나 비즈니스 모델(예: 대중/팬덤 기반, 부동산/공간 기반, 대기업/기관 기반, 콘텐츠/교육 기반 등)을 제시하세요.
 3. periodic_insight에서는 올해의 커리어 기회와 리스크를 날씨에 비유하여 구체적으로 설명하세요.
 ${commonRules}`,
 
@@ -195,9 +196,9 @@ ${commonRules}`,
 
 [연애/관계 테마 특수 지침]
 1. core_trait에서는 유저가 사랑에 빠졌을 때의 모습, 관계에서의 장점과 매력 포인트를 설명하세요.
-2. theme_insight에서는 반드시 아래 두 가지를 포함하세요:
-   a) 내가 끌리는 관계의 형태: 부처궁 데이터 기반으로 어떤 타입에 끌리며, 연애에서 어떤 태도를 보이는지.
-   b) 나의 숨겨진 본능적 매력 자산: 자녀궁 데이터("본능적 매력 자산"이라고 라벨된 데이터)를 기반으로, 타인을 본능적으로 끌어당기는 숨겨진 도화 매력, 플러팅 스타일, 성적 어필 포인트를 구체적으로 설명하세요.
+2. theme_insight에서는 반드시 아래 두 가지 내용을 자연스럽게 이어서 하나의 문자열(String)로 작성하세요:
+   - 내가 끌리는 관계의 형태: 부처궁 데이터 기반으로 어떤 타입에 끌리며, 연애에서 어떤 태도를 보이는지.
+   - 나의 숨겨진 본능적 매력 자산: 자녀궁 데이터("본능적 매력 자산"이라고 라벨된 데이터)를 기반으로, 타인을 본능적으로 끌어당기는 숨겨진 도화 매력, 플러팅 스타일, 성적 어필 포인트를 구체적으로 설명하세요.
 3. periodic_insight에서는 올해의 연애 기회와 주의할 점을 날씨에 비유하여 구체적으로 설명하세요.
 ${commonRules}`,
 
@@ -206,9 +207,9 @@ ${commonRules}`,
 
 [여가/웰니스 테마 특수 지침]
 1. core_trait에서는 유저가 스트레스를 받는 지점과 에너지를 충전하는 방식, 타고난 체질적 특성을 설명하세요.
-2. theme_insight에서는 반드시 아래 두 가지를 포함하세요:
-   a) 나의 육체적 에너지와 관리법: 질액궁 데이터 기반으로 신체적으로 취약해지기 쉬운 포인트와 에너지 관리 팁.
-   b) 나의 멘탈케어와 맞춤형 취미: 복덕궁 데이터 기반으로 어떤 취미나 여가 활동이 진정한 내면의 평화와 만족도를 가져다주는지 구체적으로 큐레이션하세요.
+2. theme_insight에서는 반드시 아래 두 가지 내용을 자연스럽게 이어서 하나의 문자열(String)로 작성하세요:
+   - 나의 육체적 에너지와 관리법: 질액궁 데이터 기반으로 신체적으로 취약해지기 쉬운 포인트와 에너지 관리 팁.
+   - 나의 멘탈케어와 맞춤형 취미: 복덕궁 데이터 기반으로 어떤 취미나 여가 활동이 진정한 내면의 평화와 만족도를 가져다주는지 구체적으로 큐레이션하세요.
 3. periodic_insight에서는 올해의 건강 리듬과 멘탈 관리 포인트를 날씨에 비유하여 구체적으로 설명하세요.
 ${commonRules}`
   };
@@ -250,10 +251,7 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 `).join("\n")}
 `;
 
-  // 7. Gemini API 호출 및 자가복구(Retry) 로직
-  const MAX_RETRIES = 5;
-  let attempt = 0;
-  let success = false;
+  // 7. Gemini API 호출
   let parsedContent = null;
 
   // E2E 테스트용 모킹 분기
@@ -276,32 +274,15 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
       theme_insight: "Mock Theme Insight",
       periodic_insight: "Mock Periodic Insight"
     };
-    success = true;
-  }
-
-  while (attempt < MAX_RETRIES && !success) {
+  } else {
     try {
-      attempt++;
-
       // E2E 테스트용 재시도/실패 모킹
-      if (order.saju_data?.e2e_mock_gemini === 'fail_retry_success') {
-        if (attempt < 4) {
-          throw new Error(`Simulated AI Error (Attempt ${attempt})`);
-        } else {
-          parsedContent = {
-            teaser_quote: "Recovered",
-            core_trait: "Recovered successfully",
-            theme_insight: "Recovered insight",
-            periodic_insight: "Recovered periodic"
-          };
-          success = true;
-          continue;
-        }
-      } else if (order.saju_data?.e2e_mock_gemini === 'fail_max_retries') {
-        throw new Error(`Simulated Permanent AI Error (Attempt ${attempt})`);
+      if (order.saju_data?.e2e_mock_gemini === 'fail_max_retries' || order.saju_data?.e2e_mock_gemini === 'fail_retry_success') {
+        // fail_retry_success 도 이제 수동 재생성이므로 그냥 실패시킵니다.
+        throw new Error(`Simulated AI Error`);
       }
 
-      console.log(`Gemini API 호출 시도 (${attempt}/${MAX_RETRIES})...`);
+      console.log(`Gemini API 호출 시도...`);
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
@@ -317,22 +298,27 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 
       const responseText = result.response.text();
       parsedContent = JSON.parse(responseText);
-      success = true; // 성공 시 루프 탈출
-    } catch (error) {
-      console.error(`Gemini API 호출 실패 (시도 ${attempt}):`, error);
-      if (attempt >= MAX_RETRIES) {
-        await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
-        // 텔레그램 알림: 리포트 생성 실패
-        await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${orderId}</code>\n사유: Gemini API 최대 재시도 횟수 초과\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
-        throw new Error("리포트 생성에 실패했습니다. (최대 재시도 횟수 초과)");
+
+      // JSON 파싱 후, AI가 실수로 문자열 대신 객체를 반환했을 경우에 대한 안전 장치(Fallback)
+      if (parsedContent && typeof parsedContent === "object") {
+        for (const key of ["teaser_quote", "core_trait", "theme_insight", "periodic_insight"]) {
+          if (parsedContent[key] && typeof parsedContent[key] === "object") {
+            parsedContent[key] = Object.values(parsedContent[key]).join("\\n\\n");
+          }
+        }
       }
-      // 재시도 전 1.5초 대기 (백오프)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+
+    } catch (error) {
+      console.error(`Gemini API 호출 실패:`, error);
+      await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
+      // 텔레그램 알림: 리포트 생성 실패
+      await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${orderId}</code>\n사유: Gemini API 호출 오류\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+      throw new Error("리포트 생성에 실패했습니다. (API 호출 오류)");
     }
   }
 
   // 8. 결과 저장
-  if (success && parsedContent) {
+  if (parsedContent) {
     await adminClient.from("reports").update({
       content: parsedContent,
       status: "completed",
