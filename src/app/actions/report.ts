@@ -277,9 +277,23 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
   } else {
     try {
       // E2E 테스트용 재시도/실패 모킹
-      if (order.saju_data?.e2e_mock_gemini === 'fail_max_retries' || order.saju_data?.e2e_mock_gemini === 'fail_retry_success') {
-        // fail_retry_success 도 이제 수동 재생성이므로 그냥 실패시킵니다.
+      if (order.saju_data?.e2e_mock_gemini === 'fail_max_retries') {
         throw new Error(`Simulated AI Error`);
+      }
+      if (order.saju_data?.e2e_mock_gemini === 'fail_retry_success') {
+        const attempts = order.saju_data?.retry_count || 0;
+        if (attempts < 1) {
+          // 첫 시도 실패, retry_count 증가시켜 다음 수동 재생성 시에는 통과하도록 함
+          const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+          const adminClient = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+          );
+          const newSajuData = { ...order.saju_data, retry_count: attempts + 1 };
+          await adminClient.from("orders").update({ saju_data: newSajuData }).eq("id", order.id);
+          
+          throw new Error(`Simulated AI Error for retry`);
+        }
       }
 
       console.log(`Gemini API 호출 시도...`);

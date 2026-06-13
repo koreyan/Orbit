@@ -80,10 +80,15 @@ export default function OrderFormClient() {
         location
       };
 
+      let finalSajuData = { ...saju_data };
+      if (process.env.NEXT_PUBLIC_E2E_MOCK === 'true') {
+        finalSajuData.e2e_mock_gemini = 'fail_max_retries';
+      }
+
       const { orderId } = await createOrderAction({
         phone,
         password,
-        saju_data,
+        saju_data: finalSajuData,
         theme,
         amount: themeInfo.price
       });

@@ -15,6 +15,26 @@ export async function confirmPaymentAction(params: {
     throw new Error("결제 승인에 필요한 파라미터가 누락되었습니다.");
   }
 
+  // E2E 테스트용 mock 결제 우회
+  if (paymentKey.startsWith("mock_")) {
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+    const adminClient = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { error: updateError } = await adminClient
+      .from("orders")
+      .update({ status: "paid" })
+      .eq("id", orderId);
+
+    if (updateError) {
+      console.error("Mock order update failed:", updateError);
+      throw new Error("결제 처리 중 오류가 발생했습니다.");
+    }
+
+    return { success: true };
+  }
+
   const secretKey = process.env.TOSS_SECRET_KEY;
   if (!secretKey) {
     throw new Error("TOSS_SECRET_KEY가 설정되지 않았습니다.");

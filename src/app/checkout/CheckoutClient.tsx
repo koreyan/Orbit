@@ -106,7 +106,13 @@ export default function CheckoutClient() {
   }, [widgets, amount]);
 
   const handlePayment = async () => {
-    if (!widgets) return;
+    if (!widgets || !orderId) return;
+
+    // E2E 녹화용 Toss 우회
+    if (process.env.NEXT_PUBLIC_E2E_MOCK === 'true') {
+      window.location.href = `/checkout/success?orderId=${orderId}&paymentKey=mock_${Date.now()}&amount=${amount}`;
+      return;
+    }
 
     try {
       // Build orderName
