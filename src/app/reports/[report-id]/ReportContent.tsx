@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2, RefreshCcw } from "lucide-react";
 import { makeReportPublic } from "@/app/actions/report";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Theme = "career" | "love" | "hobby" | string;
 
 interface ReportData {
-  teaser_quote: string;
-  core_trait: string;
-  theme_insight: string;
-  periodic_insight: string;
+  markdown?: string;
+  teaser_quote?: string;
+  core_trait?: string;
+  theme_insight?: string;
+  periodic_insight?: string;
 }
 
 interface ReportContentProps {
@@ -32,6 +34,22 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
   
   // React 18 Strict Mode 에서 useEffect가 두 번 실행되는 것을 방지하기 위한 Guard
   const hasTriggeredRef = useRef(false);
+
+  // 로딩 지연 상태 타이머 (5분 설정)
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const isDelayed = elapsedTime >= 300;
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (status === "pending" || status === "generating") {
+      timer = setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    }
+  }, [status]);
 
   // 폴링(Polling) 및 생성 트리거 로직
   useEffect(() => {
@@ -163,10 +181,48 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
         <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 text-center">
           별빛을 해석하고 있습니다
         </h2>
-        <p className="text-white/60 text-center flex items-center">
-          <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary" />
-          수천 개의 성향 데이터를 바탕으로<br className="md:hidden" /> 초개인화된 리포트를 작성 중입니다. (약 10초 소요)
+        <p className="text-white/60 text-center flex flex-col items-center gap-2 mb-8">
+          <span className="flex items-center">
+            <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary" />
+            수천 개의 성향 데이터를 바탕으로 초개인화된 리포트를 작성 중입니다.
+          </span>
+          <span className="text-sm opacity-80">(최대 5분까지 소요될 수 있습니다)</span>
         </p>
+
+        {isDelayed && (
+          <div className="mt-8 p-6 bg-white/5 border border-white/10 rounded-2xl text-center max-w-md w-full animate-in fade-in slide-in-from-bottom-4">
+            <p className="text-white/80 mb-6">
+              예상보다 시간이 조금 더 걸리고 있습니다.<br/>
+              계속 기다리시거나, 아래 옵션을 선택해 주세요.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={handleRegenerate} 
+                disabled={isRegenerating}
+                className="bg-primary hover:bg-orange-500 text-white rounded-xl h-12 w-full"
+              >
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin text-white/60" />
+                    별빛 다시 읽어내기...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="w-5 h-5 mr-2" />
+                    별빛 다시 읽어내기 (재생성)
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={() => alert("환불 기능은 아직 준비 중입니다.")}
+                variant="outline" 
+                className="border-white/20 text-white hover:bg-white/10 h-12 w-full"
+              >
+                결제 취소 및 환불하기
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -190,63 +246,75 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
           <Sparkles className="w-8 h-8 text-primary relative z-10" />
           <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full"></div>
         </div>
-        <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 leading-relaxed">
-          "{content.teaser_quote}"
-        </h2>
+        {!content.markdown && (
+          <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 leading-relaxed">
+            "{content.teaser_quote}"
+          </h2>
+        )}
       </div>
 
       {/* Main Content Sections */}
-      <div className="space-y-6 md:space-y-8">
-        
-        {/* Core Trait */}
+      {content.markdown ? (
         <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-primary/5 to-transparent pointer-events-none"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                <Star className="w-5 h-5 text-white/80" />
-              </div>
-              <h3 className="text-xl font-bold text-white">나의 진짜 모습</h3>
-            </div>
-            <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
-              {content.core_trait}
-            </p>
+          <div className="relative z-10 prose prose-invert prose-orange max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {cleanMarkdown(content.markdown)}
+            </ReactMarkdown>
           </div>
         </div>
+      ) : (
+        <div className="space-y-6 md:space-y-8">
+          {/* Core Trait */}
+          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-primary/5 to-transparent pointer-events-none"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-white/80" />
+                </div>
+                <h3 className="text-xl font-bold text-white">나의 진짜 모습</h3>
+              </div>
+              <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
+                {content.core_trait}
+              </p>
+            </div>
+          </div>
 
-        {/* Theme Specific Insight */}
-        <div className="bg-gradient-to-br from-primary/10 to-transparent backdrop-blur-xl border border-primary/20 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(255,107,53,0.1)] relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
-            <InsightIcon className="w-48 h-48 text-primary" />
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <InsightIcon className="w-5 h-5 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold text-primary">{specificInsightTitle}</h3>
+          {/* Theme Specific Insight */}
+          <div className="bg-gradient-to-br from-primary/10 to-transparent backdrop-blur-xl border border-primary/20 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(255,107,53,0.1)] relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+              <InsightIcon className="w-48 h-48 text-primary" />
             </div>
-            <p className="text-white/90 leading-relaxed md:text-lg whitespace-pre-line">
-              {content.theme_insight}
-            </p>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <InsightIcon className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-primary">{specificInsightTitle}</h3>
+              </div>
+              <p className="text-white/90 leading-relaxed md:text-lg whitespace-pre-line">
+                {content.theme_insight}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Periodic Insight */}
-        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-white/80" />
+          {/* Periodic Insight */}
+          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-white/80" />
+                </div>
+                <h3 className="text-xl font-bold text-white">다가오는 시기의 운세 흐름</h3>
               </div>
-              <h3 className="text-xl font-bold text-white">다가오는 시기의 운세 흐름</h3>
+              <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
+                {content.periodic_insight}
+              </p>
             </div>
-            <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
-              {content.periodic_insight}
-            </p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Share Section */}
       <div className="mt-16 pt-8 border-t border-white/10 text-center">
@@ -280,4 +348,18 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
       </div>
     </div>
   );
+}
+
+function cleanMarkdown(text?: string): string {
+  if (!text) return "";
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```markdown")) {
+    cleaned = cleaned.substring("```markdown".length).trim();
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.substring("```".length).trim();
+  }
+  if (cleaned.endsWith("```")) {
+    cleaned = cleaned.substring(0, cleaned.length - "```".length).trim();
+  }
+  return cleaned;
 }

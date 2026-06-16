@@ -1,9 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { filterThemePalaces, findLuStarPalaces } from "@/lib/ziwei-extractor";
+import { filterThemePalaces, findLuStarPalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 
@@ -106,12 +106,34 @@ export async function generateReportAction(orderId: string) {
         }
       });
 
-      periodicPalacesInfo = `
-[현재 10년 운(대한) 테마 분석 대상] 나이: ${liunian.daxianAgeStart}~${liunian.daxianAgeEnd}세
-- 추출된 대한 테마 궁: ${daHanThemePalaces.map(p => p.name).join(", ")}
+      // 10년 치 유년/대한 흐름 분석
+      let tenYearsInfo = "";
+      for (let i = 0; i < 10; i++) {
+        const year = currentYear + i;
+        const yearlyLiunian = calculateLiunian(chartData, year);
+        
+        // 해당 연도의 유년 명궁 찾기
+        const liunianMingZhi = yearlyLiunian.palaces['命宮'];
+        let mingPalaceInfo = "데이터 없음";
+        if (liunianMingZhi) {
+          const matchingEntry = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === liunianMingZhi);
+          if (matchingEntry && extractedStars[matchingEntry[0]]) {
+            mingPalaceInfo = formatPalaceStars(extractedStars[matchingEntry[0]]);
+            // 분석 대상 별 추가
+            if (extractedStars[matchingEntry[0]].majorStars) {
+              extractedStars[matchingEntry[0]].majorStars.forEach((s: any) => {
+                daHanThemePalaces.push({ name: matchingEntry[0], ...extractedStars[matchingEntry[0]] });
+              });
+            }
+          }
+        }
+        
+        tenYearsInfo += `- ${year}년 (만 ${yearlyLiunian.liunianAge || (year - y)}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 해당 연도의 중심 에너지: ${mingPalaceInfo}\n`;
+      }
 
-[올해(${currentYear}년) 1년 운(유년) 테마 분석 대상]
-- 추출된 유년 테마 궁: ${liuNianThemePalaces.map(p => p.name).join(", ")}
+      periodicPalacesInfo = `
+[앞으로 10년간의 운세 흐름 데이터]
+${tenYearsInfo}
 `;
     }
   } catch (error) {
@@ -141,20 +163,38 @@ export async function generateReportAction(orderId: string) {
   daHanThemePalaces.forEach(p => addStars(p));
   liuNianThemePalaces.forEach(p => addStars(p));
 
-  // 4. 커리어 테마 전용: 화록/록존이 위치한 궁(금광) 동적 탐색
+  // 4. 커리어 테마 전용: 자산 축적 방식(록존) 및 변화의 기운(4화)
   let luStarPalacesInfo = "";
+  let siHuaPalacesInfo = "";
   if (theme === 'career') {
-    const luPalaces = findLuStarPalaces(extractedStars);
-    if (luPalaces.length > 0) {
-      luPalaces.forEach(p => addStars(p));
-      luStarPalacesInfo = `
-[숨겨진 금광 위치 (록존/화록이 위치한 궁)] - 이 정보는 유저의 실질적 수익 파이프라인을 의미합니다.
-${luPalaces.map(p => `- ${p.name}궁: ${formatPalaceStars(p)}`).join("\n")}
+    try {
+      const lokJonPalace = findLokJonPalace(extractedStars);
+      if (lokJonPalace) {
+        addStars(lokJonPalace);
+        luStarPalacesInfo = `
+[평생의 재물운을 품은 별(록존)의 위치] - 이 위치가 유저의 자산 축적 방식을 결정합니다.
+- ${lokJonPalace.name}궁: ${formatPalaceStars(lokJonPalace)}
 `;
+      }
+    } catch (e) {
+      console.warn('록존 추출 실패:', e);
+    }
+
+    try {
+      const sihuaMap = findSiHuaPalaces(extractedStars);
+      siHuaPalacesInfo = `
+[네 가지 변화의 기운(사화)의 위치] - 잠재력 및 추가 강점/단점을 의미합니다.
+- 번창의 기운(화록): ${sihuaMap['화록'].map(s => `${s.palaceName}궁의 ${s.starName}`).join(', ') || '없음'}
+- 권력의 기운(화권): ${sihuaMap['화권'].map(s => `${s.palaceName}궁의 ${s.starName}`).join(', ') || '없음'}
+- 지혜의 기운(화과): ${sihuaMap['화과'].map(s => `${s.palaceName}궁의 ${s.starName}`).join(', ') || '없음'}
+- 장애의 기운(화기): ${sihuaMap['화기'].map(s => `${s.palaceName}궁의 ${s.starName}`).join(', ') || '없음'}
+`;
+    } catch (e) {
+      console.warn('사화 추출 실패:', e);
     }
   }
 
-  // 5. 지식베이스 (Ground Truth) 로드
+  // 5. 지식베이스 (Ground Truth) 로드 및 adminClient 생성
   const { createClient: createAdminClient } = await import('@supabase/supabase-js');
   const adminClient = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -181,15 +221,110 @@ ${luPalaces.map(p => `- ${p.name}궁: ${formatPalaceStars(p)}`).join("\n")}
 
   const themePromptMap: Record<string, string> = {
     career: `
-당신은 실용적인 커리어 전략가이자 비즈니스 모델 컨설턴트입니다. 유저의 명리학 데이터를 기반으로 MBTI 결과지처럼 직관적이고 뼈를 때리는 커리어 리포트를 작성합니다.
+# [시스템 프롬프트: 자미두수 커리어 코칭 리포트 생성 지침]
 
-[커리어 테마 특수 지침]
-1. core_trait에서는 유저의 타고난 업무 스타일, 리더십 유형, 재물을 다루는 감각을 설명하세요.
-2. theme_insight에서는 반드시 아래 두 가지 내용을 자연스럽게 이어서 하나의 문자열(String)로 작성하세요:
-   - 나의 최적화된 업무 스탠스: 관록궁/재백궁 데이터 기반으로 어떤 환경에서 능력을 극대화하는지.
-   - 나만의 숨겨진 금광: [숨겨진 금광 위치] 데이터가 있다면 그것을 바탕으로, "당신의 진짜 돈은 OOO에서 나옵니다"라고 구체적인 타겟 시장이나 비즈니스 모델(예: 대중/팬덤 기반, 부동산/공간 기반, 대기업/기관 기반, 콘텐츠/교육 기반 등)을 제시하세요.
-3. periodic_insight에서는 올해의 커리어 기회와 리스크를 날씨에 비유하여 구체적으로 설명하세요.
-${commonRules}`,
+## 1. 역할 및 목적 (Role & Objective)
+
+너는 자미두수 명반 데이터를 분석하여 2030 사회초년생(미취업자, 취업 준비생, 주니어 직장인)에게 직관적인 커리어 전략을 제안하는 전문 코치이다. 유저가 자신의 기질과 미래의 기회를 명확히 이해하고 현실적인 액션 플랜을 도출할 수 있도록 돕는 것이 목적이다.
+
+## 2. 출력 스타일 통제 규칙 (Strict Execution Rules)
+
+너는 오직 아래에 명시된 긍정형 규칙만을 준수하여 텍스트를 생성해야 한다.
+
+* **코드 펜스 전면 금지:** 답변의 시작과 끝에 백틱 3개(\`\`\`) 또는 \`\`\`markdown 등의 코드 블록 기호를 절대 사용하지 않는다. 응답 파일은 오직 순수 텍스트 본문(## 자미두수 커리어 분석 리포트)으로 바로 시작하여 바로 끝나야 한다.
+* **가독성 확보:** 오직 줄바꿈과 담백한 문장 구조로만 시각적 가독성을 확보한다. 모든 문장은 볼드 기호와 대괄호, 그리고 이모티콘 및 이모지(그림 문자)를 전면 생략하고 순수한 텍스트 형태로만 출력해야 한다.
+* **전문 용어 전면 배제:** 명궁, 관록궁, 재백궁, 부처궁, 탐랑, 칠살, 파군, 무곡, 화록, 화권, 화과, 화기, 록존 등 자미두수 학술 용어는 일절 쓰지 않는다.
+* **용어 대체 규칙:** 모든 요소는 일반인이 직관적으로 체감할 수 있는 한글 표현으로 풀어서 설명한다. 템플릿 안의 괄호 표시 구획은 너의 매칭을 돕기 위한 기준점일 뿐이므로 유저에게 노출할 때는 생략한다.
+* 모든 궁(자리) 명칭은 ~하는 자리의 형태로 풀어서 쓴다. (예: 명궁은 기질과 성격을 결정하는 자리, 관록궁은 나의 일과 직장을 나타내는 자리, 재백궁은 내가 재물을 벌고 쓰는 방식을 뜻하는 자리)
+* 모든 정성(별) 명칭은 ~하는 별의 형태로 풀어서 쓴다. (예: 개척자의 별, 비즈니스의 별, 행정의 별)
+* 록존은 평생의 재물운을 품은 별이라는 명칭으로 고정하여 표현한다.
+* 모든 사화(기운) 명칭은 ~의 기운의 형태로 풀어서 쓴다. (예: 화록은 번창의 기운, 화권은 권력의 기운, 화과는 명예의 기운, 화기는 장애의 기운)
+* **서사적 어조 및 문체:** 문미는 철저히 담백하고 진중한 평서문(~다, ~입니다)을 유지한다. 다만, 유저의 삶의 궤적을 깊이 관조하며 그동안의 고생과 노력을 모두 알고 있다는 듯한 깊은 온기와 위로를 문장 전반에 녹여내야 한다. 단점을 지적할 때는 비난이 아닌 염려의 시선을 담고, 운세를 말할 때는 삶의 흐름이 준비해 둔 거대한 무대로 안내하듯 서술해야 한다.
+* **시간 축 기준:** 미래 운세 시나리오는 유저가 분석을 요청한 현재 시점의 연도를 시작점으로 삼아, 연도순으로 딱 10개년을 순차적으로 서술해야 한다. (현재 기준 연도는 2026년이므로 2026년부터 2035년까지 순차적으로 생성)
+* **시간 제한 표현 지침:** 6번 준비 사항 항목의 모든 내용은 마감 기한이나 시한을 설정하는 표현을 배제하고, 평소에 늘 지속해야 하는 상시적 행동 양식으로만 서술해야 한다.
+
+---
+
+## 3. 출력 포맷 템플릿 (Output Format Template)
+
+입력받은 유저의 명반 데이터를 바탕으로 반드시 아래 구조와 문조를 유지하여 답변을 출력하십시오. 절대 백틱(\`\`\`) 기호로 전체 내용을 감싸지 마십시오.
+
+## 자미두수 커리어 분석 리포트 
+
+### 1. 기본 기질과 강점·약점
+
+명반 분석: 당신이 걸어온 삶의 궤적을 깊이 들여다보면, 기질과 성격을 결정하는 자리(명궁)에 (중심 정성의 특징을 살린 예: 거친 세상 속에서도 결코 주저앉지 않고 길을 만들어내는 단단한 개척자의 별)이 새겨져 있습니다. 또한 나의 일과 직장을 나타내는 자리(관록궁)와 내가 재물을 벌고 쓰는 방식을 뜻하는 자리(재백궁)가 (연계된 정성의 특징을 살린 풀이 기술)과 긴밀한 조화를 이루며 흐르고 있습니다.
+
+*   기본 기질 및 강점 (명반 근거): 당신의 중심을 지탱하는 (중심 별 이름)은 (해당 별이 가진 내면의 뜨거운 에너지나 재능)을 의미합니다. 이 흐름 덕분에 당신은 남모를 불안과 방황 속에서도 (현실적인 업무 상황이나 난제 앞에서 발휘되는 독보적인 돌파력과 책임감)을 쥐고 묵묵히 버텨낼 수 있었습니다. 여기에 더해 (직장/재물 자리에 머무는 별의 특징)이 함께 작용하고 있으므로, 단순히 열심히 버티는 것을 넘어 (실무 필드에서 남들이 미처 보지 못하는 기회를 포착하고 성과로 연결하는 차별화된 감각)을 온전한 내 무기로 발휘하게 됩니다.
+*   기본 약점 (명반 근거): 다만, 내면의 빛이 너무 뜨겁고 강하다 보니 필연적으로 생겨나는 작은 그늘도 존재합니다. 목표를 향해 누구보다 치열하게 직진하는 당신이기에, 때로는 (실제 조직 생활이나 협업 상황에서 과도한 속도감으로 인해 미처 살피지 못하는 디테일이나 주변의 시선)이 마음을 무겁게 만드는 취약점이 될 수 있습니다. 또한 (재물 자리에 얽힌 성향)으로 인해 커리어의 중요한 갈림길에 섰을 때, 객관적인 데이터 검증보다 (순간의 조급함이나 감정적 확신에 이끌려 스스로를 힘든 조건에 묶어두는 리스크)를 늘 염려하며 조심스럽게 살필 필요가 있습니다.
+
+---
+
+### 2. 나에게 맞는 자산 축적 방식
+
+명반 분석: 험난한 현실 속에서도 당신이 지치지 않도록 삶의 궤적이 마련해 둔 안전한 자산 창고, 즉 평생의 재물운을 품은 별(록존)은 (록존이 위치한 궁의 성격을 따뜻하게 풀이한 자리 기술)에 소중하게 보관되어 있습니다.
+
+*   적절한 돈 버는 방법: 당신의 자산은 혼자 외롭게 맨땅에서 고군분투하며 벌어들이는 것보다, (록존 위치의 특성을 반영한 현실적인 자산 유입 경로 정의)을 통해 스케일이 커집니다. 당신이 가진 단단한 기질을 바탕으로 하되, (녹존이 속한 자리의 대인관계나 환경적 특성)이 주는 온기를 받아들여 결속했을 때, 외로운 고독감은 사라지고 재물이 창고에 차곡차곡 쌓이게 됩니다.
+
+---
+
+### 3. 내 잠재력과 추가 강점·단점
+
+명반 분석: 당신이라는 존재가 더 크게 도약할 수 있도록 삶의 흐름 속에는 네 가지 변화의 기운이 흐르고 있습니다. 기회와 결실을 뜻하는 번창의 기운(화록)은 (해당 별)에서 피어나고 있으며, 책임과 장악력을 뜻하는 권력의 기운(화권)은 (해당 별)에 힘을 실어줍니다. 반면, 마음의 부담과 제약을 뜻하는 장애의 기운(화기)은 (해당 별)에 깃들어 흐름을 잠시 머뭇거리게 만듭니다.
+
+*   잠재력 및 추가 강점 (번창의 기운/화록 및 권력의 기운/화권 연계): (화록이 붙은 영역)에 번창의 기운이 깃들어 있으므로, 세상의 변화 속에서 당신이 (내 가치와 몸값을 스스로 증명하며 파이를 키워나갈 수 있는 강력한 잠재력)을 발휘합니다. 이에 더해 (화권이 붙은 영역)의 권력의 기운이 당신의 손을 잡아주기 때문에, 조직이나 프로젝트 내부에서 (어떤 전문적인 역할이나 주도권을 쥐고 사람들을 이끌어가는 당당한 리더)로서의 면모를 확실하게 각인시키게 됩니다.
+*   추가 단점 및 주의점 (장애의 기운/화기 연계): 그러나 (화기가 붙은 영역)에 장애의 기운이 흐르고 있어, 이 부분은 당신이 유독 마음을 졸이거나 상처받기 쉬운 아킬레스건이 됩니다. (대인관계, 이동, 계약, 혹은 심리적 압박 등 화기 자리에 맞는 트러블 양상)으로 인해 스스로를 자책하거나 지치게 만드는 상황이 찾아올 수 있으니, 이 기운이 흐를 때만큼은 나를 위해 한 템포 숨을 고르는 지혜를 발휘해야 합니다.
+
+---
+
+### 4. 최종 정리 및 추천
+
+강점을 발휘할 수 있는 일과 환경 (번창의 기운/화록 및 권력의 기운/화권 고려)
+지금껏 애써온 당신의 돌파력과 재능이 100% 빛을 발할 수 있도록 삶의 궤적이 가장 추천하는 환경은 (유저가 포텐을 터뜨릴 수 있는 구체적인 조직 문화, 업무 독립성, 시스템 환경 조건 정의)입니다. 특히 (유저의 결단력이나 전문성이 구원투수처럼 쓰일 수 있는 특수한 과제나 위기 상황 예시) 속에서 당신이 가진 진짜 가치가 세상에 증명되며 독보적인 성과와 자존감으로 이어집니다.
+
+약점과 리스크로 인해 피해야 할 일 (장애의 기운/화기 호응)
+*   (유저의 타고난 가치와 에너지를 무의미하게 소진시키고 영혼을 지치게 만드는 조직 형태 및 문화 서술)
+*   (유저의 기질적 취약점이 부각되어 깊은 피로감을 느끼기 쉬운 구체적인 직무 및 환경 서술)
+*   (장애의 기운/화기의 영향으로 인해 순간적으로 마음이 약해져 섣불리 수용하기 쉬운 불리한 제안이나 조건 서술)
+
+나에게 맞는 추천 직업 (평생의 재물운을 품은 별/록존 위치 및 강점 고려)
+*   (유저의 핵심 기질과 평생의 재물운을 품은 별의 위치를 결합한 2030 인기 직무 및 커리어 모델 제안 1)
+*   (유저의 핵심 기질과 평생의 재물운을 품은 별의 위치를 결합한 2030 인기 직무 및 커리어 모델 제안 2)
+*   (유저의 핵심 기질과 평생의 재물운을 품은 별의 위치를 결합한 2030 인기 직무 및 커리어 모델 제안 3)
+
+---
+
+### 5. 앞으로 다가올 기회 (10년 커리어 운세)
+주니어 단계에서 마스터로 성장하는 과정에서 마주할 구체적인 기회와 리스크 시나리오입니다. 당신의 삶의 궤적이 준비해 둔 무대들이 연도순으로 딱 10개년 동안 마크다운 테이블 형태로 정렬합니다.
+
+| 년도 | 커리어 핵심 테마 | 예상되는 구체적 기회 및 리스크 시나리오 |
+| :--- | :--- | :--- |
+| 현재 연도 | 테마 입력 | 그동안의 웅크림을 끝내고 세상에 진입하는 취준생/주니어 맞춤형 첫 무대 시나리오 서술 |
+| 현재+1년 | 테마 입력 | 내 자리를 찾고 뿌리를 내리는 안착과 인정의 단계 묘사 |
+| 현재+2년 | 테마 입력 | 다가오는 흐름 속에서 내 자산을 지키고 리스크를 방어하는 현실적 서술 |
+| 현재+3년 | 테마 입력 | 든든한 조력자나 귀인을 만나 외롭지 않게 확장하는 시나리오 서술 |
+| 현재+4년 | 테마 입력 | 내 무기를 한 단계 더 정교하게 벼려내는 직무 전환이나 전문성 탑재 시나리오 |
+| 현재+5년 | 테마 입력 | 사람들을 이끄는 단단한 리더로 우뚝 서는 권한 획득 시나리오 |
+| 현재+6년 | 테마 입력 | 좁은 울타리를 넘어 더 넓은 세상으로 발을 내딛는 무대 확장 시나리오 |
+| 현재+7년 | 테마 입력 | 업계에서 독보적인 내 이름을 각인시키는 굵직한 결실 시나리오 |
+| 현재+8년 | 테마 입력 | 내 가치가 널리 알려지며 영향력을 전파하는 명예로운 시나리오 |
+| 현재+9년 | 테마 입력 | 지난 10년의 노력이 거대한 정점을 이루는 독립이나 창업, 마스터 단계 시나리오 |
+
+---
+
+### 6. 당장 준비하면 좋은 일
+
+명반 속에 고스란히 담긴 당신의 고유한 재능과 앞으로 다가올 10년의 거대한 기회들을 바라보며, 전문 커리어 코치로서 당신의 발걸음에 힘을 실어줄 실질적인 무기 3가지를 제안합니다. 약점을 뜯어고치려 애쓰기보다, 당신이 가진 독보적인 강점을 더 단단하게 다져 다가올 무대를 쟁취하는 데 집중하십시오. (고정된 예시를 그대로 출력하지 말고, 입력된 명반의 특성에 맞게 완전히 맞춤형으로 동적 생성해야 한다)
+
+1. (첫 번째 행동 지침 제목: 현재 연도의 초기 진입 기회를 선점하기 위한 핵심 역량 시각화)
+   (현재 시점부터 들어오는 첫 진입과 기회의 흐름을 주도적으로 낚아채기 위한 강점 강화 지침입니다. 1번 항목에서 도출된 가장 강력한 실무 강점과 5번 항목의 현재 연도 테마를 결합하여, 유저가 보유한 차별화된 무기를 이력서, 포트폴리오, 혹은 제안서에 어떻게 직관적이고 밀도 있게 시각화해 두어야 하는지 구체적인 실행 가이드를 제공하십시오. 당신은 이미 충분히 해낼 수 있는 원석입니다.)
+
+2. (두 번째 행동 지침 제목: 중기 운세의 파이를 키우기 위한 나만의 독보적 전문성 심화)
+   (10년 로드맵 중반부에 찾아오는 성과 안착 및 연봉 상승 등의 기회를 맞이하여 나의 몸값과 도달 범위를 극대화하기 위한 준비입니다. 유저가 가진 타고난 재능이 시장에서 대체 불가능한 자산으로 인정받을 수 있도록, 평소에 어떤 지식적 인프라를 확장해야 하는지, 혹은 어떤 핵심 실무 경험을 중심으로 전문성을 고도화하고 레이어를 쌓아가야 하는지 구체적인 조언을 서술하십시오.)
+
+3. (세 번째 행동 지침 제목: 후반부 대형 기회와 주도권 확보를 위한 영향력 자산 구축)
+   (후반부 로드맵에 예정된 관리자 직급 승진, 무대 확장, 혹은 독립과 창업 등 거대한 운의 상승 기류에 올라타기 위한 선제적인 그릇 키우기입니다. 유저가 가진 변화의 기운(번창의 기운/화록, 권력의 기운/화권 등)이 필드에서 거침없이 뿜어져 나올 수 있도록, 작은 울타리에 안주하려는 마음을 깨부수고 대외적인 평판, 브랜딩, 혹은 거시적인 비즈니스 협업 감각을 미리 확장해 나갈 수 있는 실전 프로젝트 활동의 방향성을 명확히 제시하십시오. 당신의 삶의 궤적은 생각보다 훨씬 더 넓은 무대를 준비하고 있습니다.)
+`,
 
     love: `
 당신은 현대적이고 트렌디한 관계 심리 분석가이자 매력 컨설턴트입니다. 유저의 명리학 데이터를 기반으로 MBTI 결과지처럼 직관적이고 뼈를 때리는 연애/매력 리포트를 작성합니다.
@@ -228,7 +363,7 @@ ${commonRules}`
 `;
     }
   } else if (theme === 'career') {
-    themeSpecificContext = luStarPalacesInfo;
+    themeSpecificContext = luStarPalacesInfo + "\n" + siHuaPalacesInfo;
   }
 
   const userContext = `
@@ -251,7 +386,7 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 `).join("\n")}
 `;
 
-  // 7. Gemini API 호출
+  // 7. OpenAI API 호출
   let parsedContent = null;
 
   // E2E 테스트용 모킹 분기
@@ -268,12 +403,18 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
         // ignore
       }
     }
-    parsedContent = {
-      teaser_quote: `Mock Teaser for ${theme}`,
-      core_trait: "Mock Core Trait",
-      theme_insight: "Mock Theme Insight",
-      periodic_insight: "Mock Periodic Insight"
-    };
+    if (theme === 'career') {
+      parsedContent = {
+        markdown: "## 자미두수 커리어 분석 리포트\n\n이것은 모의(Mock) 마크다운 리포트 결과입니다. 백엔드 E2E 테스트를 위해 생성되었습니다."
+      };
+    } else {
+      parsedContent = {
+        teaser_quote: `Mock Teaser for ${theme}`,
+        core_trait: "Mock Core Trait",
+        theme_insight: "Mock Theme Insight",
+        periodic_insight: "Mock Periodic Insight"
+      };
+    }
   } else {
     try {
       // E2E 테스트용 재시도/실패 모킹
@@ -296,37 +437,48 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
         }
       }
 
-      console.log(`Gemini API 호출 시도...`);
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-        generationConfig: {
-          responseMimeType: "application/json",
-        }
+      console.log(`OpenAI API 호출 시도...`);
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContext }
+        ]
       });
 
-      const result = await model.generateContent([
-        { text: systemPrompt },
-        { text: userContext }
-      ]);
+      const responseText = response.choices[0].message.content || "";
+      
+      if (theme === 'career') {
+        let cleanedMarkdown = responseText.trim();
+        if (cleanedMarkdown.startsWith("```markdown")) {
+          cleanedMarkdown = cleanedMarkdown.substring("```markdown".length).trim();
+        } else if (cleanedMarkdown.startsWith("```")) {
+          cleanedMarkdown = cleanedMarkdown.substring("```".length).trim();
+        }
+        if (cleanedMarkdown.endsWith("```")) {
+          cleanedMarkdown = cleanedMarkdown.substring(0, cleanedMarkdown.length - "```".length).trim();
+        }
+        parsedContent = { markdown: cleanedMarkdown };
+      } else {
+        parsedContent = JSON.parse(responseText);
 
-      const responseText = result.response.text();
-      parsedContent = JSON.parse(responseText);
-
-      // JSON 파싱 후, AI가 실수로 문자열 대신 객체를 반환했을 경우에 대한 안전 장치(Fallback)
-      if (parsedContent && typeof parsedContent === "object") {
-        for (const key of ["teaser_quote", "core_trait", "theme_insight", "periodic_insight"]) {
-          if (parsedContent[key] && typeof parsedContent[key] === "object") {
-            parsedContent[key] = Object.values(parsedContent[key]).join("\\n\\n");
+        // JSON 파싱 후, AI가 실수로 문자열 대신 객체를 반환했을 경우에 대한 안전 장치(Fallback)
+        if (parsedContent && typeof parsedContent === "object") {
+          for (const key of ["teaser_quote", "core_trait", "theme_insight", "periodic_insight"]) {
+            if (parsedContent[key] && typeof parsedContent[key] === "object") {
+              parsedContent[key] = Object.values(parsedContent[key]).join("\n\n");
+            }
           }
         }
       }
 
     } catch (error) {
-      console.error(`Gemini API 호출 실패:`, error);
+      console.error(`OpenAI API 호출 실패:`, error);
       await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
       // 텔레그램 알림: 리포트 생성 실패
-      await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${orderId}</code>\n사유: Gemini API 호출 오류\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+      await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${orderId}</code>\n사유: OpenAI API 호출 오류\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
       throw new Error("리포트 생성에 실패했습니다. (API 호출 오류)");
     }
   }

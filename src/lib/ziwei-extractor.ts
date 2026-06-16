@@ -141,3 +141,50 @@ export function findLuStarPalaces(extracted: ExtractedChart): ExtractedPalace[] 
 
   return luPalaces;
 }
+
+/**
+ * 록존(祿存)이 위치한 궁을 탐색하는 함수
+ */
+export function findLokJonPalace(extracted: ExtractedChart): ExtractedPalace | null {
+  for (const [key, palace] of Object.entries(extracted)) {
+    if (!palace) continue;
+    const allStars = [
+      ...(palace.majorStars || []),
+      ...(palace.luckyStars || []),
+      ...(palace.unluckyStars || [])
+    ];
+    if (allStars.some((s: StarWithSiHua) => s.name === '녹존' || s.name === '록존')) {
+      return palace;
+    }
+  }
+  return null;
+}
+
+/**
+ * 4가지 사화(화록, 화권, 화과, 화기)가 작용하는 별과 궁을 찾는 함수
+ */
+export function findSiHuaPalaces(extracted: ExtractedChart) {
+  const sihuaMap: Record<string, { palaceName: string, starName: string }[]> = {
+    '화록': [],
+    '화권': [],
+    '화과': [],
+    '화기': []
+  };
+
+  for (const [key, palace] of Object.entries(extracted)) {
+    if (!palace) continue;
+    const allStars = [
+      ...(palace.majorStars || []),
+      ...(palace.luckyStars || []),
+      ...(palace.unluckyStars || [])
+    ];
+
+    allStars.forEach((s: StarWithSiHua) => {
+      if (s.sihua && sihuaMap[s.sihua]) {
+        sihuaMap[s.sihua].push({ palaceName: palace.name, starName: s.name });
+      }
+    });
+  }
+
+  return sihuaMap;
+}

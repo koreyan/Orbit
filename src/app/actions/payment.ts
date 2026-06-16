@@ -66,10 +66,15 @@ export async function confirmPaymentAction(params: {
       }),
     });
 
-    paymentData = await response.json();
+    const responseText = await response.text();
+    try {
+      paymentData = JSON.parse(responseText);
+    } catch (e) {
+      paymentData = { message: responseText || `HTTP status ${response.status}` };
+    }
 
     if (!response.ok) {
-      console.error("Toss Payment Confirm Error:", paymentData);
+      console.error("Toss Payment Confirm Error:", JSON.stringify(paymentData, null, 2));
       
       const isAlreadyProcessed = 
         paymentData.code === "ALREADY_PROCESSED_PAYMENT" || 
@@ -80,7 +85,7 @@ export async function confirmPaymentAction(params: {
         await sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
       }
       
-      throw new Error(paymentData.message || "결제 승인 중 오류가 발생했습니다.");
+      throw new Error(paymentData.message || `결제 승인 중 오류가 발생했습니다. (상태코드: ${response.status})`);
     }
   }
 
