@@ -1,3 +1,4 @@
+import { AccountLinkingForm } from "./AccountLinkingForm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
@@ -49,11 +50,13 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
     redirect(`/checkout/fail?code=AMOUNT_TAMPERED&message=${encodeURIComponent("결제 금액이 변조되어 결제가 자동 취소되었습니다.")}`);
   }
 
-  // Toss Payment 승인 요청
-  try {
-    await confirmPaymentAction({ paymentKey, orderId, amount: Number(amount) });
-  } catch (error: any) {
-    redirect(`/checkout/fail?code=PAYMENT_CONFIRM_FAILED&message=${encodeURIComponent(error.message)}`);
+  // Toss Payment 승인 요청 (중복 승인 방지: 이미 DB가 paid 상태면 스킵)
+  if (order.status !== 'paid') {
+    try {
+      await confirmPaymentAction({ paymentKey, orderId, amount: Number(amount) });
+    } catch (error: any) {
+      redirect(`/checkout/fail?code=PAYMENT_CONFIRM_FAILED&message=${encodeURIComponent(error.message)}`);
+    }
   }
   
   return (
@@ -84,17 +87,9 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
             <span className="text-white/50 whitespace-nowrap flex-shrink-0">테마</span>
             <span className="text-white text-right">{theme === 'career' ? '커리어' : theme === 'love' ? '연애' : theme === 'hobby' ? '여가/웰니스' : theme}</span>
           </div>
-          <div className="flex justify-between items-center text-sm gap-4">
-            <span className="text-white/50 whitespace-nowrap flex-shrink-0">연락처</span>
-            <span className="text-white text-right">{phone}</span>
-          </div>
         </div>
 
-        <Link href={`/reports/${orderId}`}>
-          <Button className="w-full h-14 rounded-xl bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-lg hover:from-orange-500 hover:to-orange-400">
-            내 별빛 이야기 보러가기
-          </Button>
-        </Link>
+        <AccountLinkingForm orderId={orderId} />
       </div>
     </main>
   );

@@ -83,9 +83,11 @@ export async function confirmPaymentAction(params: {
       if (!isAlreadyProcessed) {
         // 텔레그램 알림: 결제 승인 실패
         await sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
+        throw new Error(paymentData.message || `결제 승인 중 오류가 발생했습니다. (상태코드: ${response.status})`);
+      } else {
+        console.log("이미 승인된 토스 결제입니다. DB 업데이트 로직으로 넘어갑니다.");
+        // 에러를 던지지 않고 무시하여, 아래의 DB status 업데이트 로직으로 넘어가게 합니다.
       }
-      
-      throw new Error(paymentData.message || `결제 승인 중 오류가 발생했습니다. (상태코드: ${response.status})`);
     }
   }
 

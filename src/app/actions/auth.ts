@@ -69,21 +69,16 @@ export async function logoutAction() {
 }
 
 export async function adminLoginAction(formData: FormData) {
-  const identifier = formData.get("identifier") as string; // 이메일 또는 전화번호
+  const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  if (!identifier || !password) {
-    throw new Error("아이디(또는 전화번호)와 비밀번호를 모두 입력해주세요.");
+  if (!email || !password) {
+    throw new Error("관리자 이메일과 비밀번호를 모두 입력해주세요.");
   }
 
   const supabase = await createClient();
 
-  const isEmail = identifier.includes('@');
-  const credentials = isEmail 
-    ? { email: identifier, password } 
-    : { phone: identifier, password };
-
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword(credentials);
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
   if (authError || !authData.user) {
     throw new Error("관리자 로그인에 실패했습니다.");

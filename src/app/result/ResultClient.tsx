@@ -73,22 +73,37 @@ export default function ResultClient({
     setSelectedLiuNianYear(newYear);
   };
 
-  const handleNext = () => {
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  const handleNext = async () => {
     setErrorMessage("");
     if (!theme) {
       setErrorMessage("분석 테마를 선택해주세요.");
       return;
     }
     
-    const query = new URLSearchParams({
-      date: params.date,
-      time: params.time,
-      gender: params.gender,
-      location: params.location,
-      theme,
-    });
-    
-    router.push(`/order-form?${query.toString()}`);
+    setIsCreatingOrder(true);
+    try {
+      const amount = theme === "career" || theme === "love" ? 990 : 500;
+      const { createAnonymousOrderAction } = await import("@/app/actions/order");
+      
+      const { orderId } = await createAnonymousOrderAction({
+        saju_data: { 
+          date: params.date, 
+          time: params.time, 
+          gender: params.gender, 
+          location: params.location 
+        },
+        theme,
+        amount
+      });
+      
+      router.push(`/checkout?orderId=${orderId}`);
+    } catch (err: any) {
+      setErrorMessage(err.message || "주문 생성에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsCreatingOrder(false);
+    }
   };
 
   const getPalaceByZhi = (zhi: string) => {
@@ -531,11 +546,12 @@ export default function ResultClient({
 
           <Button 
             onClick={handleNext}
-            className="w-full h-12 md:h-14 mt-6 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-sm sm:text-base md:text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all relative overflow-hidden group px-2 md:px-4"
+            disabled={isCreatingOrder}
+            className="w-full h-12 md:h-14 mt-6 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-sm sm:text-base md:text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all relative overflow-hidden group px-2 md:px-4 disabled:opacity-50"
           >
-            <Sparkles className="mr-1.5 md:mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="truncate">선택한 테마의 내 별빛 이야기 들어보기</span>
-            <div className="absolute inset-0 bg-white/20 w-full translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite] skew-x-[-20deg]" />
+            <Sparkles className={`mr-1.5 md:mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0 ${isCreatingOrder ? "animate-spin" : ""}`} />
+            <span className="truncate">{isCreatingOrder ? "결제창 준비 중..." : "선택한 테마의 내 별빛 이야기 들어보기"}</span>
+            {!isCreatingOrder && <div className="absolute inset-0 bg-white/20 w-full translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite] skew-x-[-20deg]" />}
           </Button>
         </div>
       </div>
