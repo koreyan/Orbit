@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { filterThemePalaces, findLuStarPalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
@@ -10,10 +11,19 @@ import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
 
-  const supabase = await createClient();
+  const { createClient: createServerClient } = await import('@/lib/supabase/server');
+  const supabase = await createServerClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const currentUserId = userData?.user?.id;
 
-  // 1. 주문 정보 및 추출된 명반 데이터 가져오기
-  const { data: order, error: orderError } = await supabase
+  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+  const adminClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // 1. 주문 정보 가져오기 (adminClient로 가져와서 권한 체크 수행)
+  const { data: order, error: orderError } = await adminClient
     .from("orders")
     .select("*")
     .eq("id", orderId)
@@ -21,6 +31,18 @@ export async function generateReportAction(orderId: string) {
 
   if (orderError || !order) {
     throw new Error("주문 정보를 찾을 수 없습니다.");
+  }
+
+  // 관리자 여부 확인
+  let isAdmin = false;
+  if (currentUserId) {
+    const { data: dbUser } = await adminClient.from("users").select("role").eq("id", currentUserId).single();
+    isAdmin = dbUser?.role === 'admin';
+  }
+
+  // 본인 주문이 아니고 관리자도 아니면 차단 (보안)
+  if (order.user_id !== currentUserId && !isAdmin) {
+    throw new Error("접근 권한이 없습니다.");
   }
 
   const { theme, saju_data } = order;
@@ -31,7 +53,7 @@ export async function generateReportAction(orderId: string) {
   }
 
   // 2. Report 레코드 확인 또는 생성
-  const { data: existingReport } = await supabase
+  const { data: existingReport } = await adminClient
     .from("reports")
     .select("id, status")
     .eq("order_id", orderId)
@@ -40,7 +62,7 @@ export async function generateReportAction(orderId: string) {
   let reportId = existingReport?.id;
 
   if (!existingReport) {
-    const { data: newReport, error: insertError } = await supabase
+    const { data: newReport, error: insertError } = await adminClient
       .from("reports")
       .insert({
         order_id: orderId,
@@ -52,9 +74,14 @@ export async function generateReportAction(orderId: string) {
     if (insertError) throw new Error("리포트 생성 실패: " + insertError.message);
     reportId = newReport.id;
   } else if (existingReport.status === "completed") {
-    return { success: true, reportId };
+    // 관리자가 강제로 재생성을 누른 경우 completed라도 generating으로 변경하고 계속 진행하도록 로직 추가
+    if (isAdmin) {
+      await adminClient.from("reports").update({ status: "generating" }).eq("id", reportId);
+    } else {
+      return { success: true, reportId };
+    }
   } else {
-    await supabase.from("reports").update({ status: "generating" }).eq("id", reportId);
+    await adminClient.from("reports").update({ status: "generating" }).eq("id", reportId);
   }
 
   // 3. 테마에 따른 궁 필터링
@@ -194,12 +221,7 @@ ${tenYearsInfo}
     }
   }
 
-  // 5. 지식베이스 (Ground Truth) 로드 및 adminClient 생성
-  const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-  const adminClient = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  // 5. 지식베이스 (Ground Truth) 로드
 
   const knowledgeBase = await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
 
@@ -493,6 +515,10 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 
     // 텔레그램 알림: 리포트 생성 성공
     await sendTelegramNotification(`✨ <b>[리포트 생성 완료]</b>\n주문번호: <code>${orderId}</code>\nAI가 성공적으로 별빛 이야기를 해독했습니다!`);
+
+    // 관리자 페이지 등에서 최신 데이터를 볼 수 있도록 캐시 무효화
+    revalidatePath('/admin/order-list');
+    revalidatePath(`/admin/order-list/${orderId}`);
 
     return { success: true, reportId };
   }

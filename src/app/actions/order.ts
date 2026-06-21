@@ -110,6 +110,7 @@ export async function linkUserToOrderAction(params: {
         email: dummyEmail,
         password: defaultPassword,
         email_confirm: true,
+        user_metadata: { phone_number: phone }
       });
 
       if (signUpError) {

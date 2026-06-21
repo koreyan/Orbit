@@ -205,11 +205,12 @@ Gemini AI 기반의 분석 결과 리포트 생성을 담당합니다.
 ### 7.6 Admin API (관리자 전용)
 관리자 대시보드 및 전체 서비스 데이터 관리를 수행합니다.
 - **[백엔드 로직 연동 완료]** `src/lib/api/admin.ts` 파일이 Server Actions로 전환되어 실제 Supabase DB와 연동되었습니다.
-  - `fetchDashboardData()` : 요약 카드 데이터(총 매출, 신규 주문, 총 유저수, 총 해석 건수) 및 기간별 매출 대시보드 데이터 조회
-  - `fetchOrders()` : 전체 유저의 주문 내역 리스트 조회
-  - `fetchUsers()` : 서비스를 사용하는 전체 유저 리스트 조회
-  - `updateOrderStatus()` : 주문 상태 강제 변경 (취소, 환불 등)
-- **[보안 최적화]** `src/lib/auth/admin.ts`를 생성하여 Server Action 호출 시 관리자 세션 및 Role을 안전하게 검증(`verifyAdmin`)하도록 적용되었습니다.
+  - `fetchDashboardData()` : (예정) 요약 카드 데이터 및 기간별 매출 대시보드 데이터 조회
+  - `fetchOrders()` : 전체 유저의 주문 내역 리스트 조회 (필터링: 전체, 결제완료, 결제대기 지원)
+  - `fetchUsers()` : 서비스를 사용하는 전체 유저 리스트 조회 (관리자 계정 제외, 전화번호 마스킹 전송)
+  - `fetchOrderDetail()` : 단일 주문 상세 정보 및 연관된 리포트 내용 조회 (비-커리어 테마의 JSON 파싱된 결과를 통합 마크다운으로 변환하여 UI 호환성 제공)
+- **[보안 최적화]** `src/lib/auth/admin.ts`를 생성하여 Server Action 호출 시 관리자 세션 및 Role을 안전하게 검증(`verifyAdmin`)하며, 데이터를 가져올 때는 `SUPABASE_SERVICE_ROLE_KEY`를 사용해 RLS를 우회합니다.
+- **[관리자 액션]** 리포트 재생성 로직(`generateReportAction`)에 관리자 권한 우회 옵션을 추가하여, 결제자 본인이 아니더라도 어드민 환경에서 직접 재실행하고 강제로 상태를 `generating`으로 전이시킬 수 있습니다.
 
 ## 8. 데이터베이스 스키마 (Database Schema)
 

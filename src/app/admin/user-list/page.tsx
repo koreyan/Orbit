@@ -16,7 +16,6 @@ export default async function AdminUserListPage() {
           <table className="w-full text-left text-sm text-gray-300">
             <thead className="bg-white/5 text-gray-400 uppercase font-medium border-b border-white/10">
               <tr>
-                <th className="px-6 py-4">유저 ID</th>
                 <th className="px-6 py-4">전화번호</th>
                 <th className="px-6 py-4">권한 (Role)</th>
                 <th className="px-6 py-4">가입 시간</th>
@@ -25,8 +24,7 @@ export default async function AdminUserListPage() {
             <tbody className="divide-y divide-white/10">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-white/5 transition-colors group">
-                  <td className="px-6 py-4 font-medium text-white">{user.id}</td>
-                  <td className="px-6 py-4">{user.phoneNumber}</td>
+                  <td className="px-6 py-4 font-medium text-white">{user.phoneNumber}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                       user.role === 'admin' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 

@@ -1,7 +1,15 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { verifyAdmin } from "@/lib/auth/admin";
+
+// 관리자 전용 우회 클라이언트 (RLS 무시)
+const getAdminSupabase = async () => {
+  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 export interface DashboardData {
   totalRevenue: number;
@@ -9,15 +17,6 @@ export interface DashboardData {
   totalUsers: number;
   totalReports: number;
   revenueByPeriod: { date: string; amount: number }[];
-}
-
-export interface Order {
-  id: string;
-  createdAt: string;
-  theme: string;
-  amount: number;
-  status: 'pending' | 'paid' | 'cancelled' | 'refunded';
-  userId: string;
 }
 
 export interface User {
@@ -29,9 +28,9 @@ export interface User {
 
 export const fetchDashboardData = async (): Promise<DashboardData> => {
   await verifyAdmin();
-  const supabase = await createClient();
+  const adminDb = await getAdminSupabase();
 
-  const { data: revenueData, error: revError } = await supabase
+  const { data: revenueData, error: revError } = await adminDb
     .from('orders')
     .select('amount, created_at')
     .eq('status', 'paid');
@@ -43,20 +42,20 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const { count: newOrders, error: newOrdersError } = await supabase
+  const { count: newOrders, error: newOrdersError } = await adminDb
     .from('orders')
     .select('*', { count: 'exact', head: true })
     .gte('created_at', today.toISOString());
     
   if (newOrdersError) throw new Error('Failed to fetch new orders');
 
-  const { count: totalUsers, error: usersError } = await supabase
+  const { count: totalUsers, error: usersError } = await adminDb
     .from('users')
     .select('*', { count: 'exact', head: true });
     
   if (usersError) throw new Error('Failed to fetch total users');
 
-  const { count: totalReports, error: reportsError } = await supabase
+  const { count: totalReports, error: reportsError } = await adminDb
     .from('reports')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'completed');
@@ -93,13 +92,26 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
   };
 };
 
+export interface Order {
+  id: string;
+  createdAt: string;
+  theme: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'refunded';
+  userId: string | null;
+  phoneNumber: string;
+}
+
 export const fetchOrders = async (): Promise<Order[]> => {
   await verifyAdmin();
-  const supabase = await createClient();
+  const adminDb = await getAdminSupabase();
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .from('orders')
-    .select('id, created_at, theme, amount, status, user_id')
+    .select(`
+      id, created_at, theme, amount, status, user_id,
+      users ( phone_number )
+    `)
     .order('created_at', { ascending: false });
 
   if (error) throw new Error('Failed to fetch orders');
@@ -111,16 +123,73 @@ export const fetchOrders = async (): Promise<Order[]> => {
     amount: item.amount,
     status: item.status,
     userId: item.user_id,
+    phoneNumber: item.users?.phone_number || '비회원(결제완료 전)',
   }));
+};
+
+export interface OrderDetail extends Order {
+  reportContent: string | null;
+  reportStatus: string | null;
+}
+
+export const fetchOrderDetail = async (orderId: string): Promise<OrderDetail> => {
+  await verifyAdmin();
+  const adminDb = await getAdminSupabase();
+
+  const { data: orderData, error: orderError } = await adminDb
+    .from('orders')
+    .select(`
+      id, created_at, theme, amount, status, user_id,
+      users ( phone_number )
+    `)
+    .eq('id', orderId)
+    .single();
+
+  if (orderError) throw new Error(`Failed to fetch order: ${orderError.message}`);
+
+  const { data: reportData } = await adminDb
+    .from('reports')
+    .select('content, status')
+    .eq('order_id', orderId)
+    .single();
+
+  let markdownContent = reportData?.content?.markdown || null;
+  if (!markdownContent && reportData?.content?.core_trait) {
+    markdownContent = `
+## ${reportData.content.teaser_quote || ''}
+
+### 나의 진짜 모습
+${reportData.content.core_trait || ''}
+
+### 테마 인사이트
+${reportData.content.theme_insight || ''}
+
+### 다가오는 시기의 운세 흐름
+${reportData.content.periodic_insight || ''}
+    `.trim();
+  }
+
+  return {
+    id: orderData.id,
+    createdAt: orderData.created_at,
+    theme: orderData.theme,
+    amount: orderData.amount,
+    status: orderData.status,
+    userId: orderData.user_id,
+    phoneNumber: orderData.users?.phone_number || '비회원(결제완료 전)',
+    reportContent: markdownContent,
+    reportStatus: reportData?.status || null,
+  };
 };
 
 export const fetchUsers = async (): Promise<User[]> => {
   await verifyAdmin();
-  const supabase = await createClient();
+  const adminDb = await getAdminSupabase();
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .from('users')
     .select('id, phone_number, role, created_at')
+    .neq('role', 'admin')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error('Failed to fetch users');
@@ -135,9 +204,9 @@ export const fetchUsers = async (): Promise<User[]> => {
 
 export const updateOrderStatus = async (id: string, status: string): Promise<void> => {
   await verifyAdmin();
-  const supabase = await createClient();
+  const adminDb = await getAdminSupabase();
 
-  const { error } = await supabase
+  const { error } = await adminDb
     .from('orders')
     .update({ status })
     .eq('id', id);
