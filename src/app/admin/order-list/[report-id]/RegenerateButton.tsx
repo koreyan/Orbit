@@ -10,6 +10,7 @@ export default function RegenerateButton({ orderId }: { orderId: string }) {
   const isMounted = useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
