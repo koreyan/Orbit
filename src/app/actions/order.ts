@@ -167,6 +167,12 @@ export async function linkUserToOrderAction(params: {
     throw new Error(`주문에 유저 정보 연동 실패: ${updateError.message}`);
   }
 
+  // 3. 유저 테이블 전화번호 업데이트 (트리거 누락이나 기존 unknown 유저 보정)
+  await adminClient
+    .from("users")
+    .update({ phone_number: phone })
+    .eq("id", userId);
+
   return { success: true, userId };
 }
 
