@@ -105,6 +105,8 @@ async function generateWithRetry(model: GeminiModel, prompt: string, maxRetries 
       await new Promise(resolve => setTimeout(resolve, attempt * 5000));
     }
   }
+
+  throw new Error("Gemini content generation failed after retries.");
 }
 
 async function processFile(fileName: string) {
