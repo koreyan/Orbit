@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { generateReportAction } from "@/app/actions/report";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export default function RegenerateButton({ orderId }: { orderId: string }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,9 +27,9 @@ export default function RegenerateButton({ orderId }: { orderId: string }) {
         alert(`해당 주문(${orderId.split('-')[0]})의 결과 재생성이 완료되었습니다!`);
         router.refresh();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (isMounted.current) {
-        alert(`재생성 실패: ` + error.message);
+        alert(`재생성 실패: ` + getErrorMessage(error));
       }
     } finally {
       if (isMounted.current) {

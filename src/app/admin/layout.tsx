@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   try {
     // 관리자 권한 검증 (세션이 없거나 admin 권한이 아니면 에러 발생)
     await verifyAdmin();
-  } catch (error) {
+  } catch {
     // 권한이 없으면 관리자 로그인 페이지로 튕겨냅니다.
     redirect('/admin-login');
   }

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Briefcase, Heart, Gamepad2, ArrowRight, Sparkles, Info } from "lucide-react";
+import { Briefcase, Heart, Gamepad2, Sparkles, Info } from "lucide-react";
 import { translateZiwei } from "@/lib/ziwei-translator";
 import { MAJOR_STARS, LUCKY_STARS, UNLUCKY_STARS } from "@/lib/ziwei-extractor";
 import { calculateLiunian } from "@orrery/core/ziwei";
+import { getErrorMessage } from "@/lib/error-utils";
+import type { DaxianItem, LiunianData, ResultInterpretation, ResultParams, ZiweiChart } from "@/lib/ziwei-types";
 import {
   Dialog,
   DialogContent,
@@ -33,11 +35,11 @@ export default function ResultClient({
   interpretation,
   params 
 }: { 
-  chartData: any, 
-  daxianList: any[],
-  currentLiunian: any,
-  interpretation: { primaryStars: string[], borrowed: boolean, coreTrait: string },
-  params: any 
+  chartData: ZiweiChart,
+  daxianList: DaxianItem[],
+  currentLiunian: LiunianData,
+  interpretation: ResultInterpretation,
+  params: ResultParams
 }) {
   const router = useRouter();
   const [theme, setTheme] = useState<"career" | "love" | "hobby" | "">("");
@@ -58,7 +60,7 @@ export default function ResultClient({
   // 선택된 유년 정보 동적 계산
   const activeLiunian = useMemo(() => {
     try {
-      return calculateLiunian(chartData, selectedLiuNianYear);
+      return calculateLiunian(chartData, selectedLiuNianYear) as LiunianData;
     } catch (e) {
       console.error("Failed to calculate Liunian in client", e);
       return currentLiunian;
@@ -99,15 +101,11 @@ export default function ResultClient({
       });
       
       router.push(`/checkout?orderId=${orderId}`);
-    } catch (err: any) {
-      setErrorMessage(err.message || "주문 생성에 실패했습니다. 다시 시도해주세요.");
+    } catch (err: unknown) {
+      setErrorMessage(getErrorMessage(err, "주문 생성에 실패했습니다. 다시 시도해주세요."));
     } finally {
       setIsCreatingOrder(false);
     }
-  };
-
-  const getPalaceByZhi = (zhi: string) => {
-    return Object.values(chartData.palaces).find((p: any) => p.zhi === zhi) as any;
   };
 
   // DB에서 가져온 해석 정보를 렌더링 변수로 할당
@@ -184,7 +182,7 @@ export default function ResultClient({
                     
                     {/* 주성 (Major Stars) */}
                     <div className="flex flex-col gap-0.5 md:gap-1">
-                      {palace.stars.filter((s: any) => MAJOR_STARS.includes(s.name)).map((star: any, sIdx: number) => (
+                      {palace.stars.filter((s) => MAJOR_STARS.includes(s.name)).map((star, sIdx: number) => (
                         <span key={`m-${sIdx}`} className="text-[10px] md:text-sm font-bold text-amber-400 leading-tight flex flex-wrap items-center">
                           {translateZiwei(star.name)}
                           {star.siHua && <span className="text-[8px] md:text-[10px] bg-white/20 text-white rounded px-0.5 md:px-1 ml-0.5 md:ml-1">[{translateZiwei(star.siHua)}]</span>}
@@ -194,7 +192,7 @@ export default function ResultClient({
 
                     {/* 길성 (Lucky Stars) */}
                     <div className="flex flex-wrap gap-0.5 md:gap-1 mt-0.5 md:mt-1">
-                      {palace.stars.filter((s: any) => LUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
+                      {palace.stars.filter((s) => LUCKY_STARS.includes(s.name)).map((star, sIdx: number) => (
                         <span key={`l-${sIdx}`} className="text-[8px] md:text-xs font-semibold text-emerald-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
                           {star.siHua && <span className="text-[7px] md:text-[9px] bg-white/20 text-white rounded px-0.5 md:px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
@@ -204,7 +202,7 @@ export default function ResultClient({
 
                     {/* 흉성 (Unlucky Stars) */}
                     <div className="flex flex-wrap gap-0.5 md:gap-1 mt-0.5 md:mt-1">
-                      {palace.stars.filter((s: any) => UNLUCKY_STARS.includes(s.name)).map((star: any, sIdx: number) => (
+                      {palace.stars.filter((s) => UNLUCKY_STARS.includes(s.name)).map((star, sIdx: number) => (
                         <span key={`u-${sIdx}`} className="text-[8px] md:text-xs font-semibold text-rose-400 leading-none flex items-center">
                           {translateZiwei(star.name)}
                           {star.siHua && <span className="text-[7px] md:text-[9px] bg-white/20 text-white rounded px-0.5 md:px-1 ml-0.5">[{translateZiwei(star.siHua)}]</span>}
@@ -263,7 +261,7 @@ export default function ResultClient({
                               <span className="bg-primary/20 px-2 py-0.5 rounded text-xs">1단계</span> 
                               시기를 주관하는 명궁 찾기
                             </h4>
-                            <p className="text-xs text-white/80">자미두수는 시기마다 '나의 중심(명궁)'이 이동합니다. 10년 단위의 운은 <strong className="text-amber-400">대한(大限)</strong>, 1년 단위의 운은 <strong className="text-emerald-400">유년(流年)</strong>이라고 부릅니다. 하단에서 시기를 선택하면, 상단 명반 표에 배지가 표시되어 그 시기의 명궁 위치를 알려줍니다.</p>
+                            <p className="text-xs text-white/80">자미두수는 시기마다 &apos;나의 중심(명궁)&apos;이 이동합니다. 10년 단위의 운은 <strong className="text-amber-400">대한(大限)</strong>, 1년 단위의 운은 <strong className="text-emerald-400">유년(流年)</strong>이라고 부릅니다. 하단에서 시기를 선택하면, 상단 명반 표에 배지가 표시되어 그 시기의 명궁 위치를 알려줍니다.</p>
                           </div>
 
                           <div>
@@ -273,7 +271,7 @@ export default function ResultClient({
                             </h4>
                             <p className="mb-2 text-xs text-white/80">배지가 놓인 궁위(예: 교우궁, 관록궁 등)는 <strong>그 시기에 가장 큰 영향을 미치는 환경과 사건의 테마</strong>를 의미합니다.</p>
                             <div className="bg-white/5 p-3 rounded-lg border border-white/10 text-xs">
-                              <p className="text-white/50 mb-1">💡 예시: 올해 1년 운 배지가 <strong>'교우궁(交友宮)'</strong>에 있다면?</p>
+                              <p className="text-white/50 mb-1">💡 예시: 올해 1년 운 배지가 <strong>&apos;교우궁(交友宮)&apos;</strong>에 있다면?</p>
                               <p>올해는 <strong>대인관계, 친구, 직장 동료, 고객</strong>과 관련된 이슈가 한 해의 중심 테마가 됩니다. 새로운 인연을 맺거나 인간관계에서 에너지를 많이 쓰게 될 수 있습니다.</p>
                             </div>
                           </div>
@@ -330,7 +328,7 @@ export default function ResultClient({
                               <li><strong>탐랑(貪狼):</strong> 욕망과 교제의 별. 횡재수나 유흥, 사교 활동이 폭발적으로 늘어나며, 새로운 인간관계를 통해 기회가 열립니다.</li>
                               <li><strong>거문(巨門):</strong> 말(言)과 연구의 별. 언변이나 전문 지식을 활용하여 이득을 얻으나, 시기와 질투로 인한 구설수나 시비가 따를 수 있는 운입니다.</li>
                               <li><strong>천상(天相):</strong> 조력과 신용의 별. 계약이나 문서운이 좋아지며, 타인과의 협력이나 신용을 바탕으로 일이 순조롭게 풀리는 운입니다.</li>
-                              <li><strong>천량(天梁):</strong> 위기 극복과 보호의 별. 큰 위기가 닥쳐도 결국에는 무사히 해결되는 '선흉후길(先凶後吉)'의 든든한 보호 운이 따릅니다.</li>
+                              <li><strong>천량(天梁):</strong> 위기 극복과 보호의 별. 큰 위기가 닥쳐도 결국에는 무사히 해결되는 &apos;선흉후길(先凶後吉)&apos;의 든든한 보호 운이 따릅니다.</li>
                               <li><strong>칠살(七殺):</strong> 개척과 돌파의 별. 기존의 것을 허물고 완전히 새로운 길을 개척해야 하는, 험난하지만 역동적이고 큰 성취를 이루는 운입니다.</li>
                               <li><strong>파군(破軍):</strong> 파괴와 창조의 별. 예상치 못한 급격한 변화, 이직, 이사 등 낡은 것을 깨부수고 새롭게 판을 짜는 거대한 변동운입니다.</li>
                             </ul>
@@ -477,7 +475,7 @@ export default function ResultClient({
           
           <RadioGroup 
             value={theme}
-            onValueChange={(v) => setTheme(v as any)}
+            onValueChange={(v) => setTheme(v as "career" | "love" | "hobby")}
             className="flex flex-col gap-4 flex-1"
           >
             <div>

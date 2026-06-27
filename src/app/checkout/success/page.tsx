@@ -1,17 +1,11 @@
 import { AccountLinkingForm } from "./AccountLinkingForm";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { confirmPaymentAction } from "@/app/actions/payment";
 import { getOrderAction } from "@/app/actions/order";
+import { getErrorMessage } from "@/lib/error-utils";
 
-const THEME_MAP: Record<string, { title: string; price: number }> = {
-  career: { title: "나의 잠재력과 커리어", price: 990 },
-  love: { title: "나만의 매력과 관계", price: 990 },
-  hobby: { title: "나를 채우는 여가와 웰니스", price: 500 },
-};
 
 export const metadata: Metadata = {
   title: "결제 완료 - Orbit",
@@ -28,9 +22,6 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   const rawTheme = params.theme;
   const theme = Array.isArray(rawTheme) ? rawTheme[0] : (rawTheme || "");
   
-  const rawPhone = params.phone;
-  const phone = Array.isArray(rawPhone) ? rawPhone[0] : (rawPhone || "");
-
   const rawPaymentKey = params.paymentKey;
   const paymentKey = Array.isArray(rawPaymentKey) ? rawPaymentKey[0] : (rawPaymentKey || "");
 
@@ -39,7 +30,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   let order;
   try {
     order = await getOrderAction(orderId);
-  } catch (error) {
+  } catch {
     redirect(`/checkout/fail?code=ORDER_NOT_FOUND&message=${encodeURIComponent("주문 정보를 찾을 수 없습니다.")}`);
   }
 
@@ -54,8 +45,8 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   if (order.status !== 'paid') {
     try {
       await confirmPaymentAction({ paymentKey, orderId, amount: Number(amount) });
-    } catch (error: any) {
-      redirect(`/checkout/fail?code=PAYMENT_CONFIRM_FAILED&message=${encodeURIComponent(error.message)}`);
+    } catch (error: unknown) {
+      redirect(`/checkout/fail?code=PAYMENT_CONFIRM_FAILED&message=${encodeURIComponent(getErrorMessage(error))}`);
     }
   }
   

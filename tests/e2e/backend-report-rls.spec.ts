@@ -8,10 +8,7 @@ const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
-const uniqueSuffix = Date.now().toString().slice(-4);
-const TEST_PHONE = `0105555${uniqueSuffix}`;
 const TEST_PASSWORD = 'rlstestpwd';
-const TEST_EMAIL = `u${TEST_PHONE}@orbit-app.com`;
 const TEST_PADDED_PASSWORD = `${TEST_PASSWORD}_orbit`;
 
 test.describe('Reports RLS & Access Control E2E', () => {
@@ -78,7 +75,7 @@ let ownerUserId: string;
       await adminClient.auth.admin.deleteUser(ownerUserId);
     } else {
       const { data } = await adminClient.auth.admin.listUsers();
-      const u = data.users.find((u: any) => u.email === testEmail);
+      const u = data.users.find((u) => u.email === testEmail);
       if(u) await adminClient.auth.admin.deleteUser(u.id);
     }
   });

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createChart, getDaxianList, calculateLiunian } from "@orrery/core/ziwei";
 import { translateZiwei } from "@/lib/ziwei-translator";
+import type { ZiweiChart } from "@/lib/ziwei-types";
 
 // 14 정성 (주성) 한자 목록
 const MAJOR_STARS = [
@@ -32,7 +33,7 @@ export async function getMyeongbanAction(params: {
   let daxianList;
   let currentLiunian;
   try {
-    chartData = createChart(year, month, day, hour, minute, isMale);
+    chartData = createChart(year, month, day, hour, minute, isMale) as ZiweiChart;
     daxianList = getDaxianList(chartData);
     currentLiunian = calculateLiunian(chartData, new Date().getFullYear());
   } catch (error) {
@@ -42,18 +43,18 @@ export async function getMyeongbanAction(params: {
 
   // 2. 명궁의 주성 찾기
   const lifePalace = chartData.palaces['命宮'];
-  let primaryStars = lifePalace.stars.filter((s: any) => MAJOR_STARS.includes(s.name));
+  let primaryStars = lifePalace.stars.filter((s) => MAJOR_STARS.includes(s.name));
 
   // 3. 명궁에 주성이 없다면 천이궁의 주성 차용
   let borrowed = false;
   if (primaryStars.length === 0) {
     const qianYiPalace = chartData.palaces['遷移'];
-    primaryStars = qianYiPalace.stars.filter((s: any) => MAJOR_STARS.includes(s.name));
+    primaryStars = qianYiPalace.stars.filter((s) => MAJOR_STARS.includes(s.name));
     borrowed = true;
   }
 
   // 주성들의 한국어 이름 추출
-  const primaryStarNames = primaryStars.map((s: any) => translateZiwei(s.name));
+  const primaryStarNames = primaryStars.map((s) => translateZiwei(s.name));
 
   // 4. 지식베이스에서 해설 검색
   let coreTrait = "매우 특별하고 흥미로운 성향을 가지고 있습니다.";

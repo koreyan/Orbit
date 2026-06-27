@@ -1,5 +1,7 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-require("dotenv").config({ path: ".env.local" });
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
 
 async function testModels() {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -12,7 +14,7 @@ async function testModels() {
       const result = await model.generateContent("Hello! Are you there?");
       console.log(`✅ [${modelName}] Success: ${result.response.text().trim()}`);
     } catch (e) {
-      console.log(`❌ [${modelName}] Failed: ${e.message}`);
+      console.log(`❌ [${modelName}] Failed: ${e instanceof Error ? e.message : e}`);
     }
   }
 }

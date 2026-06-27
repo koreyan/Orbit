@@ -1,7 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { generateReportAction } from "@/app/actions/report";
 import { sendTelegramNotification } from "@/lib/telegram";
 
 export async function confirmPaymentAction(params: {
@@ -69,7 +67,7 @@ export async function confirmPaymentAction(params: {
     const responseText = await response.text();
     try {
       paymentData = JSON.parse(responseText);
-    } catch (e) {
+    } catch {
       paymentData = { message: responseText || `HTTP status ${response.status}` };
     }
 

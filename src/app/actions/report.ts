@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { filterThemePalaces, findLuStarPalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
+import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
+import type { ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
+import type { LiunianData, ZiweiChart } from "@/lib/ziwei-types";
+import fs from "node:fs";
+import path from "node:path";
 
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
@@ -89,8 +92,8 @@ export async function generateReportAction(orderId: string) {
 
   // 3-1. 대한(Da Han) 및 유년(Liu Nian) 테마 궁 추출
   let periodicPalacesInfo = "";
-  let daHanThemePalaces: any[] = [];
-  let liuNianThemePalaces: any[] = [];
+  const daHanThemePalaces: ExtractedPalace[] = [];
+  const liuNianThemePalaces: ExtractedPalace[] = [];
   let shenGongPalaceName = "알 수 없음";
   
   try {
@@ -99,9 +102,9 @@ export async function generateReportAction(orderId: string) {
       const [y, m, d] = date.split("-").map(Number);
       const [h, min] = time.split(":").map(Number);
       const isMale = gender === "M";
-      const chartData = createChart(y, m, d, h, min, isMale);
+      const chartData = createChart(y, m, d, h, min, isMale) as ZiweiChart;
       const currentYear = new Date().getFullYear();
-      const liunian = calculateLiunian(chartData, currentYear);
+      const liunian = calculateLiunian(chartData, currentYear) as LiunianData;
 
       const shengongTranslation: Record<string, string> = {
         '命宮': '명궁',
@@ -112,7 +115,7 @@ export async function generateReportAction(orderId: string) {
         '福德': '복덕궁'
       };
       const shenGongZhi = chartData.shenGongZhi;
-      const matchingShenGong = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === shenGongZhi);
+      const matchingShenGong = Object.entries(chartData.palaces).find(([, p]) => p.zhi === shenGongZhi);
       if (matchingShenGong) {
         shenGongPalaceName = shengongTranslation[matchingShenGong[0]] || matchingShenGong[0];
       }
@@ -131,7 +134,7 @@ export async function generateReportAction(orderId: string) {
       if (daxianMingIndex !== -1) {
         targetOffsets.forEach(offset => {
           const targetName = PALACE_ORDER[(daxianMingIndex + offset) % 12];
-          if (extractedStars[targetName]) daHanThemePalaces.push({ name: targetName, ...extractedStars[targetName] });
+          if (extractedStars[targetName]) daHanThemePalaces.push(extractedStars[targetName]);
         });
       }
 
@@ -140,10 +143,10 @@ export async function generateReportAction(orderId: string) {
         const themePalaceName = PALACE_ORDER[offset];
         const targetZhi = liunian.palaces[themePalaceName];
         if (targetZhi) {
-          const matchingPalaceEntry = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === targetZhi);
+          const matchingPalaceEntry = Object.entries(chartData.palaces).find(([, p]) => p.zhi === targetZhi);
           if (matchingPalaceEntry) {
             const natalPalaceName = matchingPalaceEntry[0];
-            if (extractedStars[natalPalaceName]) liuNianThemePalaces.push({ name: natalPalaceName, ...extractedStars[natalPalaceName] });
+            if (extractedStars[natalPalaceName]) liuNianThemePalaces.push(extractedStars[natalPalaceName]);
           }
         }
       });
@@ -152,25 +155,25 @@ export async function generateReportAction(orderId: string) {
       let tenYearsInfo = "";
       for (let i = 0; i < 10; i++) {
         const year = currentYear + i;
-        const yearlyLiunian = calculateLiunian(chartData, year);
+        const yearlyLiunian = calculateLiunian(chartData, year) as LiunianData;
         
         // 해당 연도의 유년 명궁 찾기
         const liunianMingZhi = yearlyLiunian.palaces['命宮'];
         let mingPalaceInfo = "데이터 없음";
         if (liunianMingZhi) {
-          const matchingEntry = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === liunianMingZhi);
+          const matchingEntry = Object.entries(chartData.palaces).find(([, p]) => p.zhi === liunianMingZhi);
           if (matchingEntry && extractedStars[matchingEntry[0]]) {
             mingPalaceInfo = formatPalaceStars(extractedStars[matchingEntry[0]]);
             // 분석 대상 별 추가
             if (extractedStars[matchingEntry[0]].majorStars) {
-              extractedStars[matchingEntry[0]].majorStars.forEach((s: any) => {
-                daHanThemePalaces.push({ name: matchingEntry[0], ...extractedStars[matchingEntry[0]] });
+              extractedStars[matchingEntry[0]].majorStars.forEach(() => {
+                daHanThemePalaces.push(extractedStars[matchingEntry[0]]);
               });
             }
           }
         }
         
-        tenYearsInfo += `- ${year}년 (만 ${yearlyLiunian.liunianAge || (year - y)}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 해당 연도의 중심 에너지: ${mingPalaceInfo}\n`;
+        tenYearsInfo += `- ${year}년 (만 ${year - y}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 해당 연도의 중심 에너지: ${mingPalaceInfo}\n`;
       }
 
       periodicPalacesInfo = `
@@ -184,24 +187,24 @@ ${tenYearsInfo}
 
   // 분석 대상 별 추출 (중복 제거)
   const starsToAnalyze = new Set<string>();
-  const addStars = (palace: any) => {
+  const addStars = (palace?: ExtractedPalace | null) => {
     if (!palace) return;
-    if (palace.majorStars) palace.majorStars.forEach((s: any) => {
+    if (palace.majorStars) palace.majorStars.forEach((s: StarWithSiHua) => {
       starsToAnalyze.add(s.name);
       if (s.sihua) starsToAnalyze.add(s.sihua);
     });
-    if (palace.luckyStars) palace.luckyStars.forEach((s: any) => {
+    if (palace.luckyStars) palace.luckyStars.forEach((s: StarWithSiHua) => {
       starsToAnalyze.add(s.name);
       if (s.sihua) starsToAnalyze.add(s.sihua);
     });
-    if (palace.unluckyStars) palace.unluckyStars.forEach((s: any) => {
+    if (palace.unluckyStars) palace.unluckyStars.forEach((s: StarWithSiHua) => {
       starsToAnalyze.add(s.name);
       if (s.sihua) starsToAnalyze.add(s.sihua);
     });
   };
 
   addStars(lifePalace);
-  themePalaces.forEach((p: any) => addStars(p));
+  themePalaces.forEach((p) => addStars(p));
   daHanThemePalaces.forEach(p => addStars(p));
   liuNianThemePalaces.forEach(p => addStars(p));
 
@@ -483,7 +486,7 @@ ${commonRules}`
 
 [유저의 기질 및 운세 데이터 (절대 이 용어들을 결과에 직접 노출하지 말 것)]
 - 타고난 본질: ${formatPalaceStars(lifePalace)}
-- 테마별 행동 방식: ${themePalaces.map((p: any) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
+- 테마별 행동 방식: ${themePalaces.map((p) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
 ${themeSpecificContext}
 ${periodicPalacesInfo}
 
@@ -505,13 +508,11 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
   if (order.saju_data?.e2e_mock_gemini?.startsWith('success_prompt')) {
     if (process.env.NODE_ENV !== "production") {
       try {
-        const fs = require('fs');
-        const path = require('path');
         fs.writeFileSync(
           path.join(process.cwd(), ".gemini_mock.log"), 
           JSON.stringify({ systemPrompt, userContext }, null, 2)
         );
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -615,11 +616,11 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 }
 
 /** 궁에 배속된 별 정보를 포맷팅하는 유틸 함수 */
-function formatPalaceStars(palace: any): string {
+function formatPalaceStars(palace?: ExtractedPalace | null): string {
   if (!palace) return "데이터 없음";
-  const major = palace.majorStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
-  const lucky = palace.luckyStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
-  const unlucky = palace.unluckyStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
+  const major = palace.majorStars?.map((s) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
+  const lucky = palace.luckyStars?.map((s) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
+  const unlucky = palace.unluckyStars?.map((s) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
   return `핵심 에너지: [${major || '비어있음'}], 보조 에너지: [${lucky || '없음'}], 주의할 에너지: [${unlucky || '없음'}]`;
 }
 

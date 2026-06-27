@@ -103,6 +103,7 @@ test.describe.serial('Webhook Asynchronous Event Backend E2E', () => {
       .select('status')
       .eq('id', dummyOrderId)
       .single();
+    if (!orderData) throw new Error('웹훅 테스트용 주문 데이터를 찾지 못했습니다.');
     
     expect(orderData.status).toBe('paid');
 
@@ -112,6 +113,7 @@ test.describe.serial('Webhook Asynchronous Event Backend E2E', () => {
       .select('status')
       .eq('payment_key', dummyPaymentKey)
       .single();
+    if (!paymentData) throw new Error('웹훅 테스트용 결제 데이터를 찾지 못했습니다.');
     
     expect(paymentData.status).toBe('done');
   });
@@ -143,6 +145,7 @@ test.describe.serial('Webhook Asynchronous Event Backend E2E', () => {
       .select('status')
       .eq('id', dummyOrderId)
       .single();
+    if (!orderData) throw new Error('취소 웹훅 테스트용 주문 데이터를 찾지 못했습니다.');
     
     expect(orderData.status).toBe('cancelled');
 
@@ -151,6 +154,7 @@ test.describe.serial('Webhook Asynchronous Event Backend E2E', () => {
       .select('status')
       .eq('payment_key', dummyPaymentKey)
       .single();
+    if (!paymentData) throw new Error('취소 웹훅 테스트용 결제 데이터를 찾지 못했습니다.');
     
     expect(paymentData.status).toBe('canceled');
   });

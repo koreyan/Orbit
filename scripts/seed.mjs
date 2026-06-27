@@ -48,7 +48,7 @@ async function seedFile(fileName, category) {
   
   console.log(`Inserting ${records.length} records from ${fileName} into category '${category}'...`);
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('z_knowledge_base')
     .insert(records);
     

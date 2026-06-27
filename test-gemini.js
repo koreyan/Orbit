@@ -1,5 +1,7 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-require("dotenv").config({ path: ".env.local" });
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { responseMimeType: "application/json" } });
@@ -33,13 +35,13 @@ async function run() {
   const userContext = "테스트용 컨텍스트입니다. 2024년부터 2025년 데이터가 있습니다.";
 
   try {
-    const result = await model.generateContent([ { text: systemPrompt }, { text: userContext } ]);
+    const result = await model.generateContent([{ text: systemPrompt }, { text: userContext }]);
     const text = result.response.text();
-    console.log("Raw output:\\n", text);
-    const parsed = JSON.parse(text);
+    console.log("Raw output:\n", text);
+    JSON.parse(text);
     console.log("Parse Success!");
   } catch (e) {
-    console.error("Error:", e.message);
+    console.error("Error:", e instanceof Error ? e.message : e);
   }
 }
 run();

@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,16 @@ import ClientDate from "@/components/ClientDate";
 
 export const dynamic = "force-dynamic";
 
+type ReportRelation = { status: string } | Array<{ status: string }> | null;
+
+interface OrderRow {
+  id: string;
+  theme: string;
+  created_at: string;
+  status: string;
+  reports: ReportRelation;
+}
+
 const THEME_TITLES: Record<string, string> = {
   career: "나의 잠재력과 커리어",
   love: "나만의 매력과 관계",
@@ -31,7 +40,7 @@ export default async function ReportsPage() {
   }
 
   // 사용자의 결제 완료된 주문 내역 조회
-  const { data: orders, error: ordersError } = await supabase
+  const { data: orders } = await supabase
     .from("orders")
     .select(`
       id,
@@ -69,7 +78,7 @@ export default async function ReportsPage() {
         </div>
         
         <div className="space-y-4">
-          {orders && orders.map((order: any) => {
+          {(orders as OrderRow[] | null)?.map((order) => {
             let reportStatus = "pending";
             
             if (order.reports) {

@@ -22,7 +22,7 @@ for (let d = 1; d <= 30; d++) {
     }
 
     if (normalFound && emptyFound) break;
-  } catch(e) {}
+  } catch {}
 }
 
 console.log("Normal:", normalFound);

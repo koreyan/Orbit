@@ -60,8 +60,25 @@ const PROMPT_TEMPLATE = `
 [원본 텍스트]
 `;
 
+interface InterpretationItem {
+  core_trait?: string;
+  career_insight?: string;
+  love_insight?: string;
+  wellness_insight?: string;
+}
+
+interface GeminiResult {
+  response: {
+    text(): string;
+  };
+}
+
+interface GeminiModel {
+  generateContent(prompt: string): Promise<GeminiResult>;
+}
+
 // 품질 검증 함수: 추출된 결과가 부실한지 체크
-function isQualityPoor(parsedJson: any[]): boolean {
+function isQualityPoor(parsedJson: InterpretationItem[]): boolean {
   if (!parsedJson || parsedJson.length === 0) return true;
   
   for (const item of parsedJson) {
@@ -77,13 +94,14 @@ function isQualityPoor(parsedJson: any[]): boolean {
 }
 
 // 자동 재시도 래퍼 (503 등 일시적 서버 오류 대응)
-async function generateWithRetry(model: any, prompt: string, maxRetries = 3): Promise<any> {
+async function generateWithRetry(model: GeminiModel, prompt: string, maxRetries = 3): Promise<GeminiResult> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await model.generateContent(prompt);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { status?: number; message?: string };
       if (attempt === maxRetries) throw error;
-      console.log(`\n⚠️ API Error (${error.status || error.message}). Retrying in ${attempt * 5} seconds... (Attempt ${attempt}/${maxRetries})`);
+      console.log(`\n⚠️ API Error (${apiError.status || apiError.message}). Retrying in ${attempt * 5} seconds... (Attempt ${attempt}/${maxRetries})`);
       await new Promise(resolve => setTimeout(resolve, attempt * 5000));
     }
   }

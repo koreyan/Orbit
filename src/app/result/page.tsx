@@ -20,10 +20,6 @@ export default async function ResultPage(props: Props) {
     redirect("/");
   }
 
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const [hour, minute] = timeStr.split(":").map(Number);
-  const isMale = genderStr === "M";
-
   // 명반 및 기초 해설 데이터 생성/조회 (DB 연동)
   let chartData;
   let interpretation;
@@ -54,7 +50,7 @@ export default async function ResultPage(props: Props) {
             별빛이 그려낸 나의 진짜 모습
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            당신만의 고유한 성향을 해독했습니다. 집중적으로 알아보고 싶은 '나 활용법' 테마를 선택해 주세요.
+            당신만의 고유한 성향을 해독했습니다. 집중적으로 알아보고 싶은 &apos;나 활용법&apos; 테마를 선택해 주세요.
           </p>
         </div>
 

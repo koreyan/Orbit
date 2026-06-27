@@ -102,6 +102,23 @@ export interface Order {
   phoneNumber: string;
 }
 
+interface OrderRow {
+  id: string;
+  created_at: string;
+  theme: string;
+  amount: number;
+  status: Order["status"];
+  user_id: string | null;
+  users?: Array<{ phone_number: string | null }> | { phone_number: string | null } | null;
+}
+
+interface UserRow {
+  id: string;
+  phone_number: string;
+  role: User["role"];
+  created_at: string;
+}
+
 export const fetchOrders = async (): Promise<Order[]> => {
   await verifyAdmin();
   const adminDb = await getAdminSupabase();
@@ -116,14 +133,16 @@ export const fetchOrders = async (): Promise<Order[]> => {
 
   if (error) throw new Error('Failed to fetch orders');
 
-  return data.map((item: any) => ({
+  return (data as OrderRow[]).map((item) => ({
     id: item.id,
     createdAt: item.created_at,
     theme: item.theme,
     amount: item.amount,
     status: item.status,
     userId: item.user_id,
-    phoneNumber: item.users?.phone_number || '비회원(결제완료 전)',
+    phoneNumber: Array.isArray(item.users)
+      ? item.users[0]?.phone_number || '비회원(결제완료 전)'
+      : item.users?.phone_number || '비회원(결제완료 전)',
   }));
 };
 
@@ -176,7 +195,7 @@ ${reportData.content.periodic_insight || ''}
     amount: orderData.amount,
     status: orderData.status,
     userId: orderData.user_id,
-    phoneNumber: orderData.users?.phone_number || '비회원(결제완료 전)',
+    phoneNumber: orderData.users?.[0]?.phone_number || '비회원(결제완료 전)',
     reportContent: markdownContent,
     reportStatus: reportData?.status || null,
   };
@@ -194,7 +213,7 @@ export const fetchUsers = async (): Promise<User[]> => {
 
   if (error) throw new Error('Failed to fetch users');
 
-  return data.map((item: any) => ({
+  return (data as UserRow[]).map((item) => ({
     id: item.id,
     phoneNumber: item.phone_number,
     role: item.role,

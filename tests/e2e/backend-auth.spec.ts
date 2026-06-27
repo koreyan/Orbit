@@ -54,7 +54,7 @@ test.describe('Auth API Backend E2E Tests', () => {
       await adminClient.auth.admin.deleteUser(successUserId);
     } else {
        const { data } = await adminClient.auth.admin.listUsers();
-       const u1 = data.users.find((u: any) => u.email === TEST_EMAIL_SUCCESS);
+       const u1 = data.users.find((u) => u.email === TEST_EMAIL_SUCCESS);
        if(u1) await adminClient.auth.admin.deleteUser(u1.id);
     }
     
@@ -62,7 +62,7 @@ test.describe('Auth API Backend E2E Tests', () => {
       await adminClient.auth.admin.deleteUser(bruteUserId);
     } else {
        const { data } = await adminClient.auth.admin.listUsers();
-       const u2 = data.users.find((u: any) => u.email === TEST_EMAIL_BRUTE);
+       const u2 = data.users.find((u) => u.email === TEST_EMAIL_BRUTE);
        if(u2) await adminClient.auth.admin.deleteUser(u2.id);
     }
   });

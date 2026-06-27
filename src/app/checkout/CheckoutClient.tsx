@@ -6,6 +6,7 @@ import { loadTossPayments, TossPaymentsWidgets } from "@tosspayments/tosspayment
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CreditCard } from "lucide-react";
 import { getOrderAction } from "@/app/actions/order";
+import { getErrorMessage } from "@/lib/error-utils";
 
 // The client key to use (provided by user for testing)
 const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
@@ -17,14 +18,17 @@ const THEME_MAP: Record<string, { title: string; price: number }> = {
   hobby: { title: "나를 채우는 여가와 웰니스", price: 500 },
 };
 
+interface OrderSummary {
+  theme: string;
+  amount: number;
+}
+
 export default function CheckoutClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const orderId = searchParams.get("orderId") || "";
-  const phone = searchParams.get("phone") || ""; // We might not have phone in query anymore! 
-  
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<OrderSummary | null>(null);
   const [themeInfo, setThemeInfo] = useState<{ title: string; price: number }>({ title: "로딩중...", price: 0 });
   const [amount, setAmount] = useState(0);
 
@@ -48,8 +52,8 @@ export default function CheckoutClient() {
         const tInfo = THEME_MAP[orderData.theme] || { title: "알 수 없는 테마", price: orderData.amount };
         setThemeInfo(tInfo);
         setAmount(orderData.amount);
-      } catch (err: any) {
-        setErrorMsg(err.message || "주문 정보를 불러오는데 실패했습니다.");
+      } catch (err: unknown) {
+        setErrorMsg(getErrorMessage(err, "주문 정보를 불러오는데 실패했습니다."));
       }
     }
     loadOrder();

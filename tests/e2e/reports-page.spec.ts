@@ -63,8 +63,6 @@ test.describe('Reports Page E2E Tests', () => {
     await page.goto('/reports/ORDER_1700000001?theme=career');
 
     const shareBtn = page.getByRole('button', { name: '외부로 공유하기' });
-    const copyBtn = page.getByRole('button', { name: '링크 복사하기' });
-
     // 외부로 공유하기 버튼 클릭 시도
     await shareBtn.click();
 

@@ -99,6 +99,7 @@ test.describe.serial('AI Retry & Self-Healing E2E', () => {
 
     // DB의 플래그를 성공 모드로 변경 (수동 재시도 시 성공하도록)
     const { data: orderData } = await supabaseAdmin.from('orders').select('saju_data').eq('id', dummyOrderIds['retry_success']).single();
+    if (!orderData) throw new Error('retry_success 주문 데이터를 찾지 못했습니다.');
     await supabaseAdmin.from('orders').update({
       saju_data: { ...orderData.saju_data, e2e_mock_gemini: 'success_prompt' }
     }).eq('id', dummyOrderIds['retry_success']);
@@ -115,6 +116,7 @@ test.describe.serial('AI Retry & Self-Healing E2E', () => {
       .select('status')
       .eq('id', dummyReportIds['retry_success'])
       .single();
+    if (!reportData) throw new Error('retry_success 리포트 데이터를 찾지 못했습니다.');
     
     expect(reportData.status).toBe('completed');
   });
@@ -148,6 +150,7 @@ test.describe.serial('AI Retry & Self-Healing E2E', () => {
       .select('status')
       .eq('id', dummyReportIds['max_retries'])
       .single();
+    if (!reportData) throw new Error('max_retries 리포트 데이터를 찾지 못했습니다.');
     
     expect(reportData.status).toBe('failed');
   });

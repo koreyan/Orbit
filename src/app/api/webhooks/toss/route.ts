@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // Toss Payments Webhook API Route
 // 가상계좌 입금 통보, 결제 취소 통보 등의 비동기 이벤트를 처리합니다.
@@ -61,8 +62,8 @@ export async function POST(request: Request) {
 
     // 처리가 성공적으로 완료되면 반드시 200 OK를 반환해야 Toss 측에서 웹훅 재전송을 멈춤
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Webhook Processing Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error, 'Internal Server Error') }, { status: 500 });
   }
 }

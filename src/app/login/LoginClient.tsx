@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export default function LoginClient() {
   const router = useRouter();
@@ -44,8 +45,8 @@ export default function LoginClient() {
         setError(result?.error || "로그인에 실패했습니다.");
         setIsLoading(false);
       }
-    } catch (err: any) {
-      setError(err.message || "로그인에 실패했습니다.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "로그인에 실패했습니다."));
       setIsLoading(false);
     }
   };

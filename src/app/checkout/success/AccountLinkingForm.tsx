@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { linkUserToOrderAction } from "@/app/actions/order";
 import { Lock, Phone, Sparkles } from "lucide-react";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export function AccountLinkingForm({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -32,8 +33,8 @@ export function AccountLinkingForm({ orderId }: { orderId: string }) {
       await linkUserToOrderAction({ orderId, phone, password });
       // 성공 시 리포트 페이지로 이동
       router.push(`/reports/${orderId}`);
-    } catch (err: any) {
-      setErrorMsg(err.message || "계정 등록에 실패했습니다. 다시 시도해주세요.");
+    } catch (err: unknown) {
+      setErrorMsg(getErrorMessage(err, "계정 등록에 실패했습니다. 다시 시도해주세요."));
       setIsLoading(false);
     }
   };

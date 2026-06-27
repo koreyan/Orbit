@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 /**
  * 텔레그램 봇 API를 호출하여 지정된 채팅방으로 메시지를 전송합니다.
  * 백그라운드에서 동작하며 실패해도 메인 로직(결제 등)에 영향을 주지 않도록 설계되었습니다.
@@ -9,10 +12,8 @@ export async function sendTelegramNotification(message: string) {
   // E2E 테스트 및 로컬 개발용: 알림 텍스트를 임시 파일로 배출하여 테스트 러너가 추적할 수 있게 함
   if (process.env.NODE_ENV !== "production") {
     try {
-      const fs = require("fs");
-      const path = require("path");
       fs.writeFileSync(path.join(process.cwd(), ".telegram_mock.log"), message);
-    } catch (e) {
+    } catch {
       // ignore
     }
   }

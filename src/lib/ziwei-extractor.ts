@@ -1,4 +1,5 @@
 import { translateZiwei } from "./ziwei-translator";
+import type { ZiweiChart, ZiweiStar } from "./ziwei-types";
 
 export const MAJOR_STARS = [
   '紫微', '天機', '太陽', '武曲', '天同', '廉貞',
@@ -29,16 +30,16 @@ export interface ExtractedPalace {
 
 export type ExtractedChart = Record<string, ExtractedPalace>;
 
-function extractStars(starsData: any[], filterList: string[]): StarWithSiHua[] {
+function extractStars(starsData: ZiweiStar[], filterList: string[]): StarWithSiHua[] {
   return starsData
-    .filter((s: any) => filterList.includes(s.name))
-    .map((s: any) => ({
+    .filter((s) => filterList.includes(s.name))
+    .map((s) => ({
       name: translateZiwei(s.name),
       sihua: s.siHua ? translateZiwei(s.siHua) : null
     }));
 }
 
-export function extractMainStars(chartData: any): ExtractedChart {
+export function extractMainStars(chartData: ZiweiChart): ExtractedChart {
   const palaces = chartData.palaces;
   if (!palaces) throw new Error("Invalid chart data");
 
@@ -146,7 +147,7 @@ export function findLuStarPalaces(extracted: ExtractedChart): ExtractedPalace[] 
  * 록존(祿存)이 위치한 궁을 탐색하는 함수
  */
 export function findLokJonPalace(extracted: ExtractedChart): ExtractedPalace | null {
-  for (const [key, palace] of Object.entries(extracted)) {
+  for (const [, palace] of Object.entries(extracted)) {
     if (!palace) continue;
     const allStars = [
       ...(palace.majorStars || []),
@@ -171,7 +172,7 @@ export function findSiHuaPalaces(extracted: ExtractedChart) {
     '화기': []
   };
 
-  for (const [key, palace] of Object.entries(extracted)) {
+  for (const [, palace] of Object.entries(extracted)) {
     if (!palace) continue;
     const allStars = [
       ...(palace.majorStars || []),

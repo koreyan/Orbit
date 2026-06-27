@@ -3,9 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createChart } from "@orrery/core/ziwei";
 import { extractMainStars } from "@/lib/ziwei-extractor";
+import type { ResultParams, ZiweiChart } from "@/lib/ziwei-types";
 
 export async function createAnonymousOrderAction(params: {
-  saju_data: any;
+  saju_data: ResultParams & Record<string, unknown>;
   theme: string;
   amount: number;
 }) {
@@ -19,7 +20,7 @@ export async function createAnonymousOrderAction(params: {
       const [year, month, day] = date.split("-").map(Number);
       const [hour, minute] = time.split(":").map(Number);
       const isMale = gender === "M";
-      const chartData = createChart(year, month, day, hour, minute, isMale);
+      const chartData = createChart(year, month, day, hour, minute, isMale) as ZiweiChart;
       extractedStars = extractMainStars(chartData);
     }
   } catch (err) {

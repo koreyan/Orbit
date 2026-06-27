@@ -5,6 +5,7 @@ import { adminLoginAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, Mail } from "lucide-react";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export function AdminLoginForm() {
   const [errorMsg, setErrorMsg] = useState("");
@@ -19,12 +20,13 @@ export function AdminLoginForm() {
     try {
       await adminLoginAction(formData);
       // 성공 시 redirect("/admin")이 서버에서 트리거됩니다.
-    } catch (err: any) {
+    } catch (err: unknown) {
       // NEXT_REDIRECT 에러 처리
-      if (err.message && err.message.includes("NEXT_REDIRECT")) {
+      const message = getErrorMessage(err);
+      if (message.includes("NEXT_REDIRECT")) {
         return; // 정상 리다이렉트이므로 무시
       }
-      setErrorMsg(err.message || "관리자 로그인에 실패했습니다.");
+      setErrorMsg(message || "관리자 로그인에 실패했습니다.");
       setIsLoading(false);
     }
   };

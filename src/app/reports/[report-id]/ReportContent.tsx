@@ -248,7 +248,7 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
         </div>
         {!content.markdown && (
           <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 leading-relaxed">
-            "{content.teaser_quote}"
+            &quot;{content.teaser_quote}&quot;
           </h2>
         )}
       </div>
