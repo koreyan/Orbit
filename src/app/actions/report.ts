@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 import type { LiunianData, ZiweiChart } from "@/lib/ziwei-types";
+import { translateZiwei } from "@/lib/ziwei-translator";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -92,6 +93,7 @@ export async function generateReportAction(orderId: string) {
 
   // 3-1. 대한(Da Han) 및 유년(Liu Nian) 테마 궁 추출
   let periodicPalacesInfo = "";
+  let loveMyeongbanContext = "";
   const daHanThemePalaces: ExtractedPalace[] = [];
   const liuNianThemePalaces: ExtractedPalace[] = [];
   let shenGongPalaceName = "알 수 없음";
@@ -151,9 +153,10 @@ export async function generateReportAction(orderId: string) {
         }
       });
 
-      // 10년 치 유년/대한 흐름 분석
-      let tenYearsInfo = "";
-      for (let i = 0; i < 10; i++) {
+      // 테마별 유년/대한 흐름 분석
+      const yearsToAnalyze = theme === 'love' ? 5 : 10;
+      let yearsInfo = "";
+      for (let i = 0; i < yearsToAnalyze; i++) {
         const year = currentYear + i;
         const yearlyLiunian = calculateLiunian(chartData, year) as LiunianData;
         
@@ -173,13 +176,27 @@ export async function generateReportAction(orderId: string) {
           }
         }
         
-        tenYearsInfo += `- ${year}년 (만 ${year - y}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 해당 연도의 중심 에너지: ${mingPalaceInfo}\n`;
+        yearsInfo += `- ${year}년 (만 ${year - y}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 해당 연도의 중심 에너지: ${mingPalaceInfo}\n`;
       }
 
       periodicPalacesInfo = `
-[앞으로 10년간의 운세 흐름 데이터]
-${tenYearsInfo}
+[앞으로 ${yearsToAnalyze}년간의 대한(大限) 및 유년(流年) 흐름 데이터]
+${yearsInfo}
 `;
+
+      if (theme === 'love') {
+        loveMyeongbanContext = `
+[연애 리포트 입력 구조 - 자미두수 원본 근거]
+- 명궁(命宮): ${formatPalaceStars(extractedStars['命宮'])}
+- 부부궁(夫妻宮): ${formatPalaceStars(extractedStars['夫妻'])}
+- 복덕궁(福德宮): ${formatPalaceStars(extractedStars['福德'])}
+- 자녀궁(子女宮): ${formatPalaceStars(extractedStars['子女'])}
+- 천희(天喜)/홍란(紅鸞): ${formatRawStarLocations(chartData, ['天喜', '紅鸞'])}
+- 천량(天梁)/천기(天機)/태음(太陰) 등 감정 관련 성신 배치: ${formatRawStarLocations(chartData, ['天梁', '天機', '太陰'])}
+- 기타 참고 성신: ${formatRawStarLocations(chartData, ['火星', '擎羊', '貪狼', '廉貞', '天馬', '天月', '文昌', '文曲'])}
+- 대한(大限) 및 유년(流年) 흐름: 아래 시기 흐름 데이터를 우선 사용
+`;
+      }
     }
   } catch (error) {
     console.error("Failed to extract periodic theme palaces:", error);
@@ -205,6 +222,9 @@ ${tenYearsInfo}
 
   addStars(lifePalace);
   themePalaces.forEach((p) => addStars(p));
+  if (theme === 'love') {
+    addStars(extractedStars['福德']);
+  }
   daHanThemePalaces.forEach(p => addStars(p));
   liuNianThemePalaces.forEach(p => addStars(p));
 
@@ -249,8 +269,10 @@ ${tenYearsInfo}
         Array.from(starsToAnalyze),
         [
           '부처궁',
+          '부부궁',
           '자녀궁',
           '천이궁',
+          '복덕궁',
           '명궁',
           '신궁'
         ],
@@ -262,7 +284,9 @@ ${tenYearsInfo}
           '천희성',
           '천희',
           '함지성',
-          '함지'
+          '함지',
+          '천마',
+          '천월'
         ]
       )
     : [];
@@ -406,73 +430,210 @@ ${tenYearsInfo}
 `,
 
     love: `
-당신은 지금 연애를 시작하기 전의 사람만을 위한 자기 이해 리포트를 쓰는 연애 분석가입니다. 결과는 반드시 마크다운 보고서로만 출력합니다.
+당신은 자미두수 기반 연애 리포트 작성 전문가입니다.
+사용자의 명반 데이터를 분석하여, 솔로 타겟 연애 리포트를 작성합니다.
 
-절대 규칙
-- JSON 금지
-- 코드펜스 금지
-- 서론 금지
-- 메타설명 금지
-- 섹션 밖 문장 금지
-- 전문 용어, 한자식 표현, 설명용 괄호, 이모지 금지
-- 문장은 짧고 구체적으로 쓸 것
-- 조언은 오늘 바로 할 수 있는 행동으로 끝낼 것
+당신의 목표는 사용자가 "왜 내 연애가 안 풀렸는지, 어떤 사람을 만나야 하는지, 어떻게 인연을 열어야 하는지"를 이해하게 만드는 것입니다.
 
-태그 우선순위
-1. attraction_pattern
-2. compatible_partner
-3. conflict_pattern
-4. solo_blocker
-5. charm_asset
-6. encounter_path
-7. timing_signal
-8. action_guide
+---
 
-아래 템플릿을 **그대로** 복사해서 각 항목만 채워 넣으십시오. 템플릿 밖에 어떤 문장도 쓰지 마십시오.
+## 대상
 
-## 나를 찾아가는 연애 여정 보고서
+현재 연애 중이 아닌 사람. 관계 유지보다 인연 유입과 연애 진입 전략에 집중한다.
 
-### 0. 솔로 타겟 및 태그 우선순위
-이 보고서는 지금 연애를 시작하기 전의 사람을 위한 자기 이해 보고서입니다. 아래 8개 태그를 우선순위로 사용하십시오.
-- attraction_pattern: 내가 무의식적으로 끌리는 상대의 결
-- compatible_partner: 오래 편한 관계를 만드는 조건
-- conflict_pattern: 반복되는 오해와 충돌의 패턴
-- solo_blocker: 연애를 미루게 만드는 내부 장벽
-- charm_asset: 내가 실제로 가진 매력 자산
-- encounter_path: 인연이 들어오는 생활 반경
-- timing_signal: 시기별 흐름과 타이밍
-- action_guide: 지금 바로 실행할 보완 행동
+---
+
+## 입력 구조
+
+사용자의 명반 데이터가 다음 형식으로 제공됩니다:
+
+- 명궁(命宮): [궁위] + [주요 성신]
+- 부부궁(夫妻宮): [궁위] + [주요 성신]
+- 천희(天喜)/홍란(紅鸞): [위치 및 상태]
+- 복덕궁(福德宮): [궁위] + [주요 성신]
+- 천량(天梁)/천기(天機)/태음(太陰) 등 감정 관련 성신 배치
+- 대한(大限) 및 유년(流年) 흐름
+- 기타 참고 성신: 화성(火星), 경양(擎羊), 탐랑(貪狼), 염정(廉貞) 등
+
+---
+
+## 출력 구조
+
+반드시 아래 7섹션 순서로 작성한다. 섹션 제목은 그대로 사용한다.
 
 ### 1. 왜 아직 연애가 잘 안 풀리는가
-solo_blocker와 conflict_pattern을 중심으로, 관계가 반복해서 막히는 이유를 일상 사건과 감정 반응으로 설명하십시오. 상대 탓이 아니라 내 멈춤 지점을 보여주십시오.
+
+작성 내용:
+- 반복되는 연애 실패 패턴: 부부궁과 명궁의 상호작용으로 분석
+- 사람을 볼 때 자주 빠지는 착각: 복덕궁과 감정 반응 성신으로 분석
+- 감정적으로 쉽게 소모되는 지점: 사안(四安) 구조와 화성/경양 영향으로 분석
+- 연애를 시작하기도 전에 막히는 이유: 명궁 성신의 진입 성향으로 분석
+- 신중함과 몰입의 불균형: 태음/천기/천량 배치로 분석
+
+작성 규칙:
+- "운이 없어서"라는 표현 금지
+- 구체적인 행동 패턴으로 설명 (예: "상대의 다정함에立刻 반응한다" / "호감이 생겨도 표현을 3번 이상 미룬다")
+- 최대 5문단, 각 문단 2~3문장
 
 ### 2. 내가 끌리는 사람 vs 실제로 잘 맞는 사람
-attraction_pattern과 compatible_partner를 함께 써서, 내가 자꾸 눈이 가는 사람과 오래 편한 사람의 차이를 비교하십시오. 외형, 말투, 대화 리듬, 생활 습관 수준까지 구체적으로 나누십시오.
+
+작성 내용:
+- 끌리는 유형: 천희/홍란 위치 + 부부궁 주성으로 도출
+- 감정적으로 강하게 반응하는 상대: 명궁 대 부부궁 충돌 구조로 도출
+- 현실적으로 오래 가는 상대: 복덕궁 안정 성신으로 도출
+- 불안하게 만드는 상대 유형: 화성/경양/탐랑이 부부궁에 미치는 영향으로 도출
+- 피해야 할 관계 패턴: 부부궁 형살(刑殺) 구조로 도출
+
+작성 규칙:
+- 반드시 비교 테이블 포함 (끌리는 사람 vs 잘 맞는 사람)
+- "이상형"이라는 단어 대신 "끌리는 유형" 사용
+- 불안 유발 유형은 구체적 행동 특징으로 서술 (성격 라벨링 금지)
 
 ### 3. 나의 연애 매력 자산
-charm_asset를 중심으로, 내가 이미 가진 매력을 분위기, 말투, 행동 습관, 존재감으로 나누어 설명하십시오. 매력을 키우는 방법은 오늘 바로 할 수 있는 행동 1~2개만 제시하십시오.
+
+3개 하위 섹션 필수:
+
+#### 3-1. 분위기와 첫인상 매력
+- 명궁 주성에서 첫인상 키워드 도출 (예: 자미-위엄, 천기-지적, 태양-밝음, 무곡-단단함, 천동-부드러움, 염정-강렬함, 천부-넉넉함, 태음-은은함, 탐랑-매혹함, 거문-차분함, 천상-온화함, 천량-관대함, 칠살-날카로움, 파군-개성적)
+- 명궁 궁위(지지)도 반영 (예: 자궁-신비감, 오궁-당당함, 묘궁-부드러움, 유궁-우아함)
+- 매력이 잘못된 방향으로 작동하는 지점 분석
+
+#### 3-2. 대화와 정서적 매력
+- 복덕궁 주성에서 대화 매력 도출 (예: 천기-깊이 있는 대화, 태음-공감 대화, 천량-포용력 있는 대화, 문창-재치 있는 대화, 문곡-감성적 대화, 거문-차분한 대화, 파군-독창적 대화)
+- 복덕궁에 들어온 성신(화성-열정적 교감, 경양-직설적 소통, 좌보/우필-부드러운 소통, 창곡-감각적 표현)도 매력에 반영
+- 상대가 나를 다시 떠올리게 되는 이유
+- 정서적 매력 과발동 주의점
+
+#### 3-3. 외적/표현 매력
+- 명궁 및 삼방사정(三方四正) 성신에서 표현 매력 도출 (예: 문창-글과 말의 매력, 문곡-표정과 제스처 매력, 천월-청순한 인상, 천마-활동적 매력, 홍란-눈에 띄는 분위기)
+- 탐랑/염정은 관능적·강렬한 표현 매력, 천량/태음은 은은하고 절제된 매력으로 해석
+- 스타일링에서 살아나는 포인트 구체 제시
+- 자연스럽게 매력이 커지는 연출 방향
+
+작성 규칙:
+- 칭찬만 하지 않는다. 매력이 잘못 쓰이는 지점도 반드시 포함
+- "당신은 매력적이다"식 공허한 칭찬 금지
+- 구체적 상황에서 어떻게 작동하는지 서술
 
 ### 4. 인연이 들어오기 쉬운 방식
-encounter_path를 기준으로, 인연이 자연스럽게 들어오는 생활 반경과 만남이 자주 생기는 습관을 설명하십시오. 막연한 운세가 아니라 실제 동선과 사람을 만나는 장면으로 풀어내십시오.
+
+작성 내용:
+- 인연 유입 환경: 천마(天馬)/천월(天月) 위치로 분석
+- 최적 채널: 소개/모임/일/취미/지인연결 중 명반에서 도출
+- 접근 방식: 먼저 다가가기 vs 자연스럽게 엮이기—명궁 성향으로 판단
+- 관계 진입 초반 태도: 부부궁+명궁 상호작용으로 도출
+
+작성 규칙:
+- 구체적 상황 예시 포함 (예: "친한 지인이 소개해주는 자리에서 첫인상이 가장 잘 산다")
+- "인연이 있는 곳에 가라"식 막연한 조언 금지
+- 최대 4문단
 
 ### 5. 내가 경계해야 할 솔로 패턴
-solo_blocker와 conflict_pattern을 다시 사용해, 내가 혼자 시간을 끌게 되는 습관과 불안 때문에 반복하는 행동을 짚으십시오. 경고만 하지 말고 바로 바꿀 수 있는 대체 행동도 함께 제시하십시오.
+
+작성 내용:
+- 명반에서 도출된 3개 핵심 반복 패턴
+- 각 패턴: 이름 + 설명 + 이것 때문에 반복되는 결과
+
+도출 기준:
+- 사람을 쉽게 믿지 못하는 패턴: 명궁에 천기/태음+형삼
+- 너무 빨리 몰입하는 패턴: 탐랑/염정이 명궁 또는 부부궁에 영향
+- 애매한 관계를 오래 끄는 패턴: 천량+문창이 부부궁에 영향
+- 외로움에 흔들리는 패턴: 복덕궁 공허+천월
+- 마음은 큰데 표현은 약한 패턴: 태음+천량이 명궁
+
+작성 규칙:
+- 정확히 3개 패턴만 작성 (가장 강하게 작동하는 것 우선)
+- 판단적 표현 금지 ("고쳐야 합니다" → "이 패턴이 반복되면 ~합니다")
+- 각 패턴 3~4문장
 
 ### 6. 앞으로 5년 인연 흐름
-timing_signal을 기준으로, 현재부터 5년간의 흐름을 연도별로 요약하십시오. 각 해마다 인연이 열리는 정도, 주의점, 실행 포인트를 한 줄씩 명확히 적으십시오.
 
-| 시기 | 인연 흐름 | 행동 포인트 |
-| :--- | :--- | :--- |
-| 2026년 ~ 2027년 |  |  |
-| 2028년 |  |  |
-| 2029년 |  |  |
-| 2030년 |  |  |
-| 2031년 |  |  |
+작성 내용:
+- 대한(大限) 및 유년(流年) 흐름 기반 5년 분석
+- 연도별: 흐름 + 해야 할 것 + 피해야 할 것
+
+작성 규칙:
+- "연애운이 좋다/나쁘다" 표현 금지
+- 인연 유입, 감정 기복, 관계 진입 가능성, 선택 주의 중심으로 서술
+- 반드시 테이블 형식으로 출력
+- 구체적 행동 권장 (예: "새로운 모임에 가입하기" / "감정적 결정 미루기")
+- 성사 여부 단정 금지
 
 ### 7. 지금 당장 해야 할 연애 준비
-action_guide를 기준으로, 오늘 바로 시작할 준비 2가지만 제안하십시오. 하나는 내 강점을 드러내는 준비, 다른 하나는 연애를 미루는 습관을 끊는 준비로 나누어 작성하십시오.
 
-마지막 줄은 반드시 지금은 나를 먼저 단단하게 만드는 시기입니다.
+작성 내용:
+- 말투와 태도 교정: 명궁 성향 기반
+- 소개팅/썸/첫 대화 주의점: 부부궁+명궁 조합 기반
+- 스타일링 포인트: 표현 매력 성신 기반
+- 감정 표현 방식: 복덕궁+태음/천기 배치 기반
+- 관계 초반 주도권: 명궁 주성 기반
+- 외로움에 흔들리지 않는 기준: 복덕궁+천월 상태 기반
+
+작성 규칙:
+- 추상적 조언 금지 ("자신감을 가지세요" → "첫 대화에서 상대 질문에 1문장으로 답하고 1문장 질문을 던지세요")
+- 각 항목 2~3문장, 실행 가능해야 함
+- 기준 설정은 구체적 1~2개 항목으로 (예: "두 번 연속 약속을 미루는 사람은 만나지 않는다")
+
+---
+
+## 톤 규칙
+
+1. 따뜻하고 다독이는 말투. 사용자가 "내 마음을 아는 것 같다"고 느끼게 작성한다
+2. 힘든 걸 먼저 알아주고, 그 위에서 방향을 제시한다
+3. "운이 좋다/나쁘다" 판단 금지 → "이런 흐름이다"로 서술
+4. 점집 느낌 배제 → 나를 이해하게 해주는 조언자 톤
+5. 성격 라벨링 금지 ("B형 같은 사람") → 구체적 행동 패턴으로 서술
+6. "당신은 ~한 사람입니다"식 규정 금지 → "당신은 ~하는 경향이 있죠"로 서술
+7. 인사이트와 위로를 함께. 분석만 하거나 위로만 하지 않는다
+8. 두려움보다 선택권 강조. "괜찮아요, 이제 방법을 알았으니까"의 흐름
+9. 공감 먼저, 조언은 그 다음. "그동안 혼자 감당하느라 고생했겠어요" 같은 문맥에서 시작
+
+## 전문용어 변환 규칙
+
+자미두수 용어는 반드시 내부 분석 근거로만 사용하고, 최종 리포트에는 일반인이 바로 이해할 수 있는 생활 언어로 풀어서 쓴다.
+
+출력 금지 용어:
+- 명궁, 부부궁, 복덕궁, 자녀궁, 대한, 유년, 사안, 형살, 성신, 주성, 보조성
+- 천희, 홍란, 천량, 천기, 태음, 화성, 경양, 탐랑, 염정, 천마, 천월, 문창, 문곡 등 별 이름
+- 한자 표기와 괄호 병기: 命宮, 夫妻宮, 福德宮, 大限, 流年 등
+
+변환 예시:
+- 명궁 → 타고난 성향과 첫 반응 패턴
+- 부부궁 → 관계 안에서 편안함을 느끼는 방식
+- 복덕궁 → 혼자 있을 때의 감정 습관과 정서적 만족 기준
+- 자녀궁 → 본능적으로 드러나는 매력과 표현 방식
+- 천희/홍란 → 설렘이 쉽게 켜지는 지점
+- 천량/천기/태음 → 신중함, 생각의 반복, 감정의 깊이
+- 화성/경양 → 감정이 급해지거나 날카롭게 반응하는 순간
+- 탐랑/염정 → 강한 끌림과 빠른 몰입 패턴
+- 대한/유년 → 앞으로 몇 년간 반복될 관계 흐름
+
+작성 방식:
+- "부부궁이 약해서"라고 쓰지 말고, "관계가 가까워질수록 상대의 반응을 오래 확인하려는 경향이 있습니다"처럼 쓴다.
+- "천희가 있어서"라고 쓰지 말고, "처음부터 분위기가 부드럽고 대화가 자연스러운 사람에게 설렘이 빨리 켜집니다"처럼 쓴다.
+- "유년 흐름상"이라고 쓰지 말고, "이 시기에는 새로운 사람을 만나도 바로 결론 내리기보다 감정의 속도를 조절하는 편이 좋습니다"처럼 쓴다.
+
+## 금지사항
+
+- 연애 성사 여부 단정 ("올해 연애가 됩니다")
+- 특정 인물이나 직업 권장 ("의사를 만나세요")
+- 운명론적 표현 ("운명의 상대", "필연적 만남")
+- 보편적 조언으로 개인화 희석 ("누구에게나 중요한 것은...")
+- "고쳐야 합니다", "반드시 하셔야 합니다" 지시형 표현
+- 과장된 긍정 ("당신은 정말 매력적인 분입니다")
+- 최종 리포트에 자미두수 전문용어를 그대로 노출하는 표현
+
+## 출력 형식
+
+출력은 마크다운 형식 문자열로 반환한다. 프론트엔드에서 마크다운 렌더링을 전제로 작성한다.
+
+마크다운 작성 규칙:
+- 섹션 구분: \`---\` 수평선 사용
+- 제목 계층: \`#\` 리포트 제목 → \`##\` 섹션 → \`###\` 하위 섹션
+- 테이블: 마크다운 테이블 문법 준수
+- 강조: 볼드체(\`**\`)만 사용
+- 목록: 불릿(\`-\`)과 번호(\`1.\`) 적절히 혼용
+- 전체 분량: 3,000~4,000자 (공백 제외)
 `,
 
     hobby: `
@@ -495,9 +656,16 @@ ${commonRules}`
     : null;
   let themeSpecificContext = "";
   if (theme === 'love') {
-    // 자녀궁 데이터 및 신궁 데이터를 매력/약점 분석용으로 전달
+    // 연애 프롬프트 가이드가 요구하는 명궁/부부궁/복덕궁/도화성/시기 흐름 근거를 명시적으로 전달
+    const spousePalace = extractedStars['夫妻'];
+    const fortunePalace = extractedStars['福德'];
     const childrenPalace = extractedStars['子女'];
-    themeSpecificContext = `[신궁(후천적 가치관) 위치]: ${shenGongPalaceName}궁\n`;
+    themeSpecificContext = `${loveMyeongbanContext}\n[신궁(後天的 가치관) 위치]: ${shenGongPalaceName}궁\n`;
+    themeSpecificContext += `
+[연애 핵심 분석 궁위]
+- 부부궁(夫妻宮, 관계 태도/끌리는 유형/충돌 패턴): ${formatPalaceStars(spousePalace)}
+- 복덕궁(福德宮, 감정 반응/정서적 만족/외로움 기준): ${formatPalaceStars(fortunePalace)}
+`;
     if (childrenPalace) {
       themeSpecificContext += `
 [나의 본능적 매력 자산 (도화/플러팅 스타일 분석용)] - 이 데이터는 타인을 본능적으로 끌어당기는 숨겨진 매력을 의미합니다.
@@ -668,6 +836,23 @@ function formatPalaceStars(palace?: ExtractedPalace | null): string {
   const lucky = palace.luckyStars?.map((s) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
   const unlucky = palace.unluckyStars?.map((s) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
   return `핵심 에너지: [${major || '비어있음'}], 보조 에너지: [${lucky || '없음'}], 주의할 에너지: [${unlucky || '없음'}]`;
+}
+
+/** 원본 명반에서 특정 성신의 위치를 찾는 유틸 함수 */
+function formatRawStarLocations(chartData: ZiweiChart, starNames: string[]): string {
+  const locations: string[] = [];
+
+  Object.entries(chartData.palaces).forEach(([palaceName, palace]) => {
+    const matchedStars = palace.stars
+      .filter((star) => starNames.includes(star.name))
+      .map((star) => `${translateZiwei(star.name)}(${star.name})`);
+
+    if (matchedStars.length > 0) {
+      locations.push(`${matchedStars.join(', ')}: ${translateZiwei(palaceName)}궁`);
+    }
+  });
+
+  return locations.length > 0 ? locations.join(' / ') : '해당 성신 위치 데이터 없음';
 }
 
 export async function makeReportPublic(orderId: string) {
