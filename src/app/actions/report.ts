@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
-import type { ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
+import { extractLoveTags, filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
+import type { ExtractedPalace, LoveTagData, StarWithSiHua } from "@/lib/ziwei-extractor";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -406,6 +406,17 @@ ${tenYearsInfo}
 
 ## 나를 찾아가는 연애 여정 보고서
 
+### 0. 솔로 타겟 및 태그 우선순위
+이 리포트는 지금 연애를 시작하기 전의 사람을 위한 자기 이해 보고서입니다. 아래 8개 태그를 우선순위로 사용하십시오.
+- attraction_pattern: 내가 무의식적으로 끌리는 상대의 결
+- compatible_partner: 오래 편한 관계를 만드는 조건
+- conflict_pattern: 반복되는 오해와 충돌의 패턴
+- solo_blocker: 연애를 미루게 만드는 내부 장벽
+- charm_asset: 내가 실제로 가진 매력 자산
+- encounter_path: 인연이 들어오는 생활 반경
+- timing_signal: 시기별 흐름과 타이밍
+- action_guide: 지금 바로 실행할 보완 행동
+
 당신의 타고난 흐름을 바탕으로, 당신이 어떤 사람과 호흡을 맞출 때 가장 나다워질 수 있는지, 그리고 당신 안에 숨겨진 매력은 무엇인지 깊이 있게 들여다보겠습니다.
 
 ### 1. 내가 마음속으로 갈망하는 이성의 모습
@@ -449,6 +460,7 @@ ${tenYearsInfo}
 * **실천법:** 연애할 때 주도권을 잃거나 감정을 왜곡하기 쉬운 약점을 고치기 위해, 당신의 본질적인 기운을 아주 작은 일상에 적용해 보는 것입니다. 주변 사람들과 소통하거나 약속을 잡을 때 (사용자가 무의미하게 주도권을 넘겨주던 구체적인 행동 상황)을 의식적으로 차단하십시오. 대신에 (일상에서 실제로 바로 뱉어볼 수 있는 주체적이고 명확한 대화 대사 예시 및 행동 요령)을 당당하게 실천해 보십시오. 소소한 일상에서부터 내 주관을 담백하고 시원하게 표현하는 근육을 키워두어야, 앞으로 만날 소중한 이성 앞에서도 내 중심을 완벽하게 지키는 건강하고 대등한 연애를 시작할 수 있습니다.
 
 지금은 당신이라는 멋진 보석을 더 깊게 가다듬을 최고의 타이밍입니다. 나를 먼저 단단하게 채울 때, 다음 인연은 반드시 당신에게 깊이 매료될 것입니다.
+${commonRules}
 `,
 
     hobby: `
@@ -466,6 +478,9 @@ ${commonRules}`
   const systemPrompt = themePromptMap[theme] || themePromptMap['career'];
 
   // 6-1. 테마별 특수 컨텍스트 생성
+  const loveTagData: LoveTagData | null = theme === 'love'
+    ? extractLoveTags(extractedStars, shenGongPalaceName, periodicPalacesInfo)
+    : null;
   let themeSpecificContext = "";
   if (theme === 'love') {
     // 자녀궁 데이터 및 신궁 데이터를 매력/약점 분석용으로 전달
@@ -475,6 +490,19 @@ ${commonRules}`
       themeSpecificContext += `
 [나의 본능적 매력 자산 (도화/플러팅 스타일 분석용)] - 이 데이터는 타인을 본능적으로 끌어당기는 숨겨진 매력을 의미합니다.
 - ${childrenPalace.name}궁 환경: ${formatPalaceStars(childrenPalace)}
+`;
+    }
+    if (loveTagData) {
+      themeSpecificContext += `
+[연애 태그 8종 요약] - 아래 항목은 리포트의 해석 우선순위를 정하는 내부 분류입니다.
+- attraction_pattern: ${loveTagData.attraction_pattern}
+- compatible_partner: ${loveTagData.compatible_partner}
+- conflict_pattern: ${loveTagData.conflict_pattern}
+- solo_blocker: ${loveTagData.solo_blocker}
+- charm_asset: ${loveTagData.charm_asset}
+- encounter_path: ${loveTagData.encounter_path}
+- timing_signal: ${loveTagData.timing_signal}
+- action_guide: ${loveTagData.action_guide}
 `;
     }
   } else if (theme === 'career') {

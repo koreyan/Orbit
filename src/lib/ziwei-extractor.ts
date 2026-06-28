@@ -189,3 +189,55 @@ export function findSiHuaPalaces(extracted: ExtractedChart) {
 
   return sihuaMap;
 }
+
+export interface LoveTagData {
+  attraction_pattern: string;
+  compatible_partner: string;
+  conflict_pattern: string;
+  solo_blocker: string;
+  charm_asset: string;
+  encounter_path: string;
+  timing_signal: string;
+  action_guide: string;
+}
+
+const formatStars = (palace: ExtractedPalace | undefined): string => {
+  if (!palace) return '없음';
+
+  const starNames = [
+    ...(palace.majorStars || []),
+    ...(palace.luckyStars || []),
+    ...(palace.unluckyStars || [])
+  ]
+    .map((star) => star.name)
+    .filter(Boolean);
+
+  if (starNames.length === 0) {
+    return palace.borrowed ? `${palace.name}궁은 주성을 빌려 해석합니다` : `${palace.name}궁은 비어 있습니다`;
+  }
+
+  return `${palace.name}궁의 ${starNames.join(', ')}`;
+};
+
+export function extractLoveTags(
+  extracted: ExtractedChart,
+  shenGongPalaceName: string,
+  periodicPalacesInfo: string
+): LoveTagData {
+  const lifePalace = extracted['命宮'];
+  const spousePalace = extracted['夫妻'];
+  const childrenPalace = extracted['子女'];
+  const migrationPalace = extracted['遷移'];
+  const financialPalace = extracted['財帛'];
+
+  return {
+    attraction_pattern: `끌림의 방향은 ${formatStars(childrenPalace)}와 ${formatStars(lifePalace)}에서 먼저 드러납니다.`,
+    compatible_partner: `오래 편한 사람의 기준은 ${formatStars(spousePalace)}의 안정감과 소통 방식에 맞춰집니다.`,
+    conflict_pattern: `갈등이 반복되는 패턴은 ${formatStars(spousePalace)}와 ${shenGongPalaceName}의 조합에서 드러나는 경계심입니다.`,
+    solo_blocker: `연애를 미루게 만드는 장벽은 ${shenGongPalaceName}이 요구하는 책임감과 ${formatStars(lifePalace)}의 고집에서 생깁니다.`,
+    charm_asset: `당신의 매력 자산은 ${formatStars(lifePalace)}의 기질과 ${formatStars(childrenPalace)}의 본능적 끌림, ${formatStars(migrationPalace)}의 대외적 분위기가 함께 만듭니다.`,
+    encounter_path: `인연은 ${formatStars(migrationPalace)}처럼 바깥 활동과 사람을 자주 만나는 흐름에서 들어옵니다.`,
+    timing_signal: periodicPalacesInfo || `시기 흐름은 ${formatStars(financialPalace)}의 안정감과 계절감처럼 천천히 드러납니다.`,
+    action_guide: `지금은 ${formatStars(lifePalace)}의 강점을 먼저 정리하고, ${formatStars(spousePalace)}가 원하는 대화 습관을 실제 관계 밖에서 연습해야 합니다.`,
+  };
+}

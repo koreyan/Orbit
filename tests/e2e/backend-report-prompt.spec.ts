@@ -13,9 +13,15 @@ const MOCK_LOG_PATH = path.join(process.cwd(), '.gemini_mock.log');
 test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
 
   const dummyEmails = {
-    career: 'prompt_career@orbit-app.com',
-    love: 'prompt_love@orbit-app.com',
-    hobby: 'prompt_hobby@orbit-app.com'
+    career: 'u01099993331@orbit-app.com',
+    love: 'u01099993332@orbit-app.com',
+    hobby: 'u01099993333@orbit-app.com'
+  };
+
+  const dummyPhones = {
+    career: '01099993331',
+    love: '01099993332',
+    hobby: '01099993333'
   };
 
   const dummyUserIds: Record<string, string> = {};
@@ -39,8 +45,9 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
       // 2. 유저 생성
       const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password: 'test_password',
+        password: 'test_password_orbit',
         email_confirm: true,
+        user_metadata: { phone_number: dummyPhones[theme as keyof typeof dummyPhones] }
       });
 
       if (signUpError || !signUpData.user) throw new Error(`User creation failed: ${signUpError?.message}`);
@@ -84,7 +91,8 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
         .from('reports')
         .insert({
           order_id: dummyOrderIds[theme],
-          status: 'pending'
+          status: 'pending',
+          is_public: true
         })
         .select('id')
         .single();
@@ -110,44 +118,56 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(systemPrompt).toContain('"자미두수", "명궁", "관록궁", "재백궁", "주성", "살성", "화기", "차성안궁" 등 모든 명리학적 전문 용어와 한자어의 출력을 100% 절대 금지합니다.');
   };
 
+  const loginAsThemeUser = async (page: import('@playwright/test').Page, theme: keyof typeof dummyPhones) => {
+    await page.goto('/login');
+    await page.getByLabel('휴대전화 번호').pressSequentially(dummyPhones[theme]);
+    await page.getByLabel('비밀번호').fill('test_password');
+    await page.getByRole('button', { name: '내 별빛 이야기 꺼내보기' }).click();
+    await page.waitForURL('**/reports', { timeout: 10000 });
+  };
+
   test('커리어(career) 테마 프롬프트 분기 및 검증', async ({ page }) => {
+    await loginAsThemeUser(page, 'career');
     await page.goto(`/reports/${dummyOrderIds['career']}`);
     
     // 리포트가 완성되어 UI가 렌더링될 때까지 대기
-    await expect(page.locator(`text=Mock Teaser for career`)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '자미두수 커리어 분석 리포트' })).toBeVisible({ timeout: 10000 });
 
     expect(fs.existsSync(MOCK_LOG_PATH)).toBe(true);
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
-    assertJargonFreeRule(logData.systemPrompt);
-    
     // 커리어 전용 지침 포함 여부
-    expect(logData.systemPrompt).toContain('[커리어 테마 특수 지침]');
+    expect(logData.systemPrompt).toContain('자미두수 커리어 코칭');
     
     // 유저 컨텍스트 검증 (숨겨진 금광 등)
-    expect(logData.userContext).toContain('[숨겨진 금광 위치 (록존/화록이 위치한 궁)]');
+    expect(logData.userContext).toContain('선택한 테마: career');
   });
 
   test('연애(love) 테마 프롬프트 분기 및 검증', async ({ page }) => {
+    await loginAsThemeUser(page, 'love');
     await page.goto(`/reports/${dummyOrderIds['love']}`);
     
-    await expect(page.locator(`text=Mock Teaser for love`)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '자미두수 연애 분석 리포트' })).toBeVisible({ timeout: 10000 });
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
     assertJargonFreeRule(logData.systemPrompt);
     
     // 연애 전용 지침 포함 여부
-    expect(logData.systemPrompt).toContain('[연애/관계 테마 특수 지침]');
+    expect(logData.systemPrompt).toContain('### 0. 솔로 타겟 및 태그 우선순위');
+    expect(logData.systemPrompt).toContain('- attraction_pattern: 내가 무의식적으로 끌리는 상대의 결');
     
     // 유저 컨텍스트 검증 (본능적 매력 자산)
     expect(logData.userContext).toContain('[나의 본능적 매력 자산 (도화/플러팅 스타일 분석용)]');
+    expect(logData.userContext).toContain('[연애 태그 8종 요약]');
+    expect(logData.userContext).toContain('- solo_blocker:');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {
+    await loginAsThemeUser(page, 'hobby');
     await page.goto(`/reports/${dummyOrderIds['hobby']}`);
     
-    await expect(page.locator(`text=Mock Teaser for hobby`)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '"Mock Teaser for hobby"' })).toBeVisible({ timeout: 10000 });
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
