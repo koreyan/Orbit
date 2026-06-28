@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { extractLoveTags, filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import type { ExtractedPalace, LoveTagData, StarWithSiHua } from "@/lib/ziwei-extractor";
-import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
+import { fetchKnowledgeBaseForLove, fetchKnowledgeBaseForStars, formatKnowledgeBaseContext } from "@/lib/knowledge-base";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
@@ -240,8 +240,32 @@ ${tenYearsInfo}
   }
 
   // 5. 지식베이스 (Ground Truth) 로드
-
-  const knowledgeBase = await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
+  const knowledgeBase = theme === 'love'
+    ? {}
+    : await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
+  const loveKnowledgeBase = theme === 'love'
+    ? await fetchKnowledgeBaseForLove(
+        adminClient,
+        Array.from(starsToAnalyze),
+        [
+          '부처궁',
+          '자녀궁',
+          '천이궁',
+          '명궁',
+          '신궁'
+        ],
+        [
+          '도화성',
+          '도화',
+          '홍란성',
+          '홍란',
+          '천희성',
+          '천희',
+          '함지성',
+          '함지'
+        ]
+      )
+    : [];
 
   // 6. 테마별 맞춤형 시스템 프롬프트 생성
   const commonRules = `
@@ -509,15 +533,9 @@ ${commonRules}`
     themeSpecificContext = `\n[신궁(후천적 가치관) 위치]: ${shenGongPalaceName}궁\n` + luStarPalacesInfo + "\n" + siHuaPalacesInfo;
   }
 
-  const userContext = `
-선택한 테마: ${theme}
-
-[유저의 기질 및 운세 데이터 (절대 이 용어들을 결과에 직접 노출하지 말 것)]
-- 타고난 본질: ${formatPalaceStars(lifePalace)}
-- 테마별 행동 방식: ${themePalaces.map((p) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
-${themeSpecificContext}
-${periodicPalacesInfo}
-
+  const knowledgeBaseContext = theme === 'love'
+    ? formatKnowledgeBaseContext(loveKnowledgeBase)
+    : `
 [지식베이스 (Ground Truth)]
 ${Object.entries(knowledgeBase).map(([star, insight]) => `
 별 이름: ${star}
@@ -527,6 +545,18 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 - 웰니스/여가: ${insight.wellness_insight}
 - 시기별 조언: ${insight.periodic_insight}
 `).join("\n")}
+`;
+
+  const userContext = `
+선택한 테마: ${theme}
+
+[유저의 기질 및 운세 데이터 (절대 이 용어들을 결과에 직접 노출하지 말 것)]
+- 타고난 본질: ${formatPalaceStars(lifePalace)}
+- 테마별 행동 방식: ${themePalaces.map((p) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
+${themeSpecificContext}
+${periodicPalacesInfo}
+
+${knowledgeBaseContext}
 `;
 
   // 7. OpenAI API 호출

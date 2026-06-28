@@ -161,6 +161,9 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('[나의 본능적 매력 자산 (도화/플러팅 스타일 분석용)]');
     expect(logData.userContext).toContain('[연애 태그 8종 요약]');
     expect(logData.userContext).toContain('- solo_blocker:');
+    expect(logData.userContext).toContain('[지식베이스 - star | 매칭어:');
+    expect(logData.userContext).toContain('[지식베이스 - palace | 매칭어:');
+    expect(logData.userContext).toContain('[지식베이스 - formation | 매칭어:');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {
