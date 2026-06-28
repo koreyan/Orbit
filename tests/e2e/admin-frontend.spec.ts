@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 
+const adminEmail = process.env.E2E_ADMIN_EMAIL;
+const adminPassword = process.env.E2E_ADMIN_PASSWORD;
+
 test.describe('관리자 프론트엔드 E2E 테스트', () => {
+  test.beforeEach(async ({ page }) => {
+    test.skip(!adminEmail || !adminPassword, '관리자 E2E는 E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD가 필요합니다.');
+
+    await page.goto('/admin-login');
+    await page.locator('input[name="email"]').fill(adminEmail!);
+    await page.locator('input[name="password"]').fill(adminPassword!);
+    await page.getByRole('button', { name: '관리자 로그인' }).click();
+    await page.waitForURL(/\/admin/);
+  });
 
   test('1. 관리자 레이아웃: 사이드바 라우팅 및 404 동작 확인', async ({ page }) => {
     // 1. 대시보드 진입
@@ -100,5 +112,30 @@ test.describe('관리자 프론트엔드 E2E 테스트', () => {
     
     const userBadge = page.locator('span:has-text("USER")').first();
     await expect(userBadge).toBeVisible();
+  });
+
+  test('6. 모바일 관리자 레이아웃: 사이드바가 상단 네비게이션으로 전환된다', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/admin');
+
+    const layout = page.getByTestId('admin-layout');
+    const sidebar = page.getByTestId('admin-sidebar');
+
+    await expect(layout).toHaveClass(/flex-col/);
+    await expect(sidebar).toHaveClass(/w-full/);
+    await expect(sidebar).toHaveClass(/h-auto/);
+    await expect(page.getByRole('heading', { name: '매출 조회 대시보드' })).toBeVisible();
+  });
+
+  test('7. 모바일 관리자 리스트: 테이블 대신 카드 목록을 표시한다', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto('/admin/order-list');
+    await expect(page.getByTestId('admin-order-mobile-list')).toBeVisible();
+    await expect(page.getByTestId('admin-order-table')).toBeHidden();
+
+    await page.goto('/admin/user-list');
+    await expect(page.getByTestId('admin-user-mobile-list')).toBeVisible();
+    await expect(page.getByTestId('admin-user-table')).toBeHidden();
   });
 });
