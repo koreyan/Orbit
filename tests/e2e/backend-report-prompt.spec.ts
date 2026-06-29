@@ -158,6 +158,9 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('올해/유월 흐름 근거');
     expect(logData.systemPrompt).toContain('1월부터 12월까지 정확히 12개 행');
     expect(logData.systemPrompt).toContain('연도 단위로 대체하지 않습니다');
+    expect(logData.systemPrompt).toContain('현재 매력 → 매력이 흐려지는 순간 → 기르는 방법');
+    expect(logData.systemPrompt).toContain('외적 매력 섹션에서는 배려, 정서적 지지, 깊은 대화, 자기 성찰을 반복하지 않습니다');
+    expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
     
     // 연애 전용 컨텍스트 검증: layered prompt stack
     expect(logData.userContext).toContain('[USER_CHART_DATA]');
@@ -167,6 +170,8 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('[MONTHLY_LIUYUE_FLOW]');
     expect(logData.userContext).toContain('이성 비율이 높은 환경');
     expect(logData.userContext).toContain('태그별 보강 근거');
+    expect(logData.userContext).toContain('[3-2. 정서적 매력]');
+    expect(logData.userContext).toContain('[3-3. 외적 매력]');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {

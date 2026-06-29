@@ -31,11 +31,25 @@ const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
     writingInstruction: "끌림과 장기 적합성을 비교하고, 부처궁 공궁이면 관록궁 대궁 보정을 반드시 쓴다.",
   },
   {
-    section: "3. 나의 연애 매력 자산",
-    primaryPalaces: ["명궁", "천이궁", "자녀궁", "복덕궁", "도화성"],
+    section: "3-1. 분위기와 첫인상 매력",
+    primaryPalaces: ["명궁", "천이궁", "도화성"],
     directEvidenceLimit: 8,
     requiredTags: ["charm_asset", "attraction_pattern"],
-    writingInstruction: "칭찬이 아니라 실제 장면에서 드러나는 첫인상, 대화, 표현 매력과 오작동 지점을 함께 쓴다.",
+    writingInstruction: "첫인상, 분위기, 말투, 표정, 거리감, 반응 속도를 쓴다. 공허한 칭찬 금지.",
+  },
+  {
+    section: "3-2. 정서적 매력",
+    primaryPalaces: ["복덕궁", "부처궁/부부궁", "명궁", "화기/살성"],
+    directEvidenceLimit: 8,
+    requiredTags: ["charm_asset", "compatible_partner", "solo_blocker"],
+    writingInstruction: "감정 반응, 대화, 공감, 안정감, 표현 타이밍, 관계 거리감만 쓴다. 현재 매력 → 매력이 흐려지는 순간 → 기르는 방법 구조로 작성한다. 옷차림, 색감, 사진, 자세, 몸의 사용 중심 조언은 쓰지 않는다.",
+  },
+  {
+    section: "3-3. 외적 매력",
+    primaryPalaces: ["자녀궁/자식궁", "천이궁", "질액궁", "도화성", "명궁"],
+    directEvidenceLimit: 8,
+    requiredTags: ["charm_asset", "attraction_pattern"],
+    writingInstruction: "표정, 시선, 자세, 몸의 사용, 목소리 톤, 말 속도, 옷의 실루엣, 색감, 사진/프로필 분위기처럼 외부에서 관찰 가능한 요소만 쓴다. 배려, 정서적 지지, 깊은 대화, 자기 성찰을 반복하지 않는다. 현재 매력 → 매력이 흐려지는 순간 → 기르는 방법 구조로 작성한다.",
   },
   {
     section: "4. 인연이 들어오기 쉬운 방식",
