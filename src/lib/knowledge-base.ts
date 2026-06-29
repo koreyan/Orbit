@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import type { LoveEvidenceTag } from './report-prompts/types';
 
 export interface KnowledgeBaseEntry {
   target_subject: string;
@@ -120,4 +121,98 @@ export function formatKnowledgeBaseContext(entries: KnowledgeBaseContextEntry[])
 - 웰니스/여가: ${entry.wellness_insight}
 - 시기별 조언: ${entry.periodic_insight}
 `).join('\n');
+}
+
+interface LoveTagMappingRow {
+  tag: string;
+  z_knowledge_base: KnowledgeBaseEntry | KnowledgeBaseEntry[] | null;
+}
+
+const isKnowledgeBaseEntry = (value: unknown): value is KnowledgeBaseEntry => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.target_subject === 'string';
+};
+
+const normalizeJoinedKnowledgeBase = (value: KnowledgeBaseEntry | KnowledgeBaseEntry[] | null): KnowledgeBaseEntry | null => {
+  if (Array.isArray(value)) {
+    return value.find((item) => isKnowledgeBaseEntry(item)) ?? null;
+  }
+
+  return isKnowledgeBaseEntry(value) ? value : null;
+};
+
+export async function fetchKnowledgeBaseByLoveTags(
+  supabase: SupabaseClient,
+  tags: LoveEvidenceTag[],
+  limitPerTag: number
+): Promise<Record<LoveEvidenceTag, KnowledgeBaseContextEntry[]>> {
+  const result = tags.reduce<Record<LoveEvidenceTag, KnowledgeBaseContextEntry[]>>((acc, tag) => {
+    acc[tag] = [];
+    return acc;
+  }, {} as Record<LoveEvidenceTag, KnowledgeBaseContextEntry[]>);
+
+  if (tags.length === 0 || limitPerTag <= 0) return result;
+
+  const { data, error } = await supabase
+    .from('z_love_tag_mapping')
+    .select(`
+      tag,
+      z_knowledge_base (
+        ${KNOWLEDGE_BASE_SELECT_FIELDS},
+        category
+      )
+    `)
+    .in('tag', tags)
+    .order('tag', { ascending: true });
+
+  if (error) {
+    console.warn('Error fetching love tag knowledge base:', error.message);
+    return result;
+  }
+
+  const rows = (data ?? []) as LoveTagMappingRow[];
+  const seenByTag = new Map<LoveEvidenceTag, Set<string>>();
+
+  for (const row of rows) {
+    if (!tags.includes(row.tag as LoveEvidenceTag)) continue;
+
+    const tag = row.tag as LoveEvidenceTag;
+    if (result[tag].length >= limitPerTag) continue;
+
+    const entry = normalizeJoinedKnowledgeBase(row.z_knowledge_base);
+    if (!entry) continue;
+
+    const seenSubjects = seenByTag.get(tag) ?? new Set<string>();
+    if (seenSubjects.has(entry.target_subject)) continue;
+
+    seenSubjects.add(entry.target_subject);
+    seenByTag.set(tag, seenSubjects);
+
+    result[tag].push({
+      ...entry,
+      category: 'formation',
+      matched_term: tag,
+    });
+  }
+
+  return result;
+}
+
+export function formatTaggedKnowledgeBaseContext(
+  entriesByTag: Record<LoveEvidenceTag, KnowledgeBaseContextEntry[]>
+): string {
+  const blocks = Object.entries(entriesByTag).map(([tag, entries]) => {
+    if (entries.length === 0) return `[태그별 보강 근거 - ${tag}]\n- 매칭 근거 없음`;
+
+    const formattedEntries = entries.map((entry, index) => `
+${index + 1}. ${entry.target_subject}
+   - 연애/관계성: ${entry.love_insight}
+   - 시기별 조언: ${entry.periodic_insight}
+`).join('');
+
+    return `[태그별 보강 근거 - ${tag}]${formattedEntries}`;
+  });
+
+  return blocks.join('\n');
 }
