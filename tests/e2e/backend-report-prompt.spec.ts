@@ -160,6 +160,8 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('연도 단위로 대체하지 않습니다');
     expect(logData.systemPrompt).toContain('현재 매력 → 매력이 흐려지는 순간 → 기르는 방법');
     expect(logData.systemPrompt).toContain('외적 매력 섹션에서는 배려, 정서적 지지, 깊은 대화, 자기 성찰을 반복하지 않습니다');
+    expect(logData.systemPrompt).toContain('천이궁은 외적 매력의 핵심 근거가 아니라, 밖에서 드러나는 대외 반응과 인기의 보조 근거로만 사용합니다');
+    expect(logData.systemPrompt).not.toContain('질액궁');
     expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
     
     // 연애 전용 컨텍스트 검증: layered prompt stack
