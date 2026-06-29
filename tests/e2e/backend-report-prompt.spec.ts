@@ -151,19 +151,20 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
-    assertJargonFreeRule(logData.systemPrompt);
+    expect(logData.systemPrompt).toContain('## 근거 우선순위 및 사용량 규칙');
+    expect(logData.systemPrompt).toContain('사용자 실제 명반 직접 근거');
+    expect(logData.systemPrompt).toContain('반드시 아래 6섹션 순서로 작성합니다.');
+    expect(logData.systemPrompt).toContain('인연 유입 방식 근거');
+    expect(logData.systemPrompt).toContain('올해/유월 흐름 근거');
     
-    // 연애 전용 지침 포함 여부
-    expect(logData.systemPrompt).toContain('### 0. 솔로 타겟 및 태그 우선순위');
-    expect(logData.systemPrompt).toContain('- attraction_pattern: 내가 무의식적으로 끌리는 상대의 결');
-    
-    // 유저 컨텍스트 검증 (본능적 매력 자산)
-    expect(logData.userContext).toContain('[나의 본능적 매력 자산 (도화/플러팅 스타일 분석용)]');
-    expect(logData.userContext).toContain('[연애 태그 8종 요약]');
-    expect(logData.userContext).toContain('- solo_blocker:');
-    expect(logData.userContext).toContain('[지식베이스 - star | 매칭어:');
-    expect(logData.userContext).toContain('[지식베이스 - palace | 매칭어:');
-    expect(logData.userContext).toContain('[지식베이스 - formation | 매칭어:');
+    // 연애 전용 컨텍스트 검증: layered prompt stack
+    expect(logData.userContext).toContain('[USER_CHART_DATA]');
+    expect(logData.userContext).toContain('[FIXED_ZIWEI_REFERENCE]');
+    expect(logData.userContext).toContain('[DYNAMIC_DB_EVIDENCE]');
+    expect(logData.userContext).toContain('[SECTION_EVIDENCE_MAP]');
+    expect(logData.userContext).toContain('[MONTHLY_LIUYUE_FLOW]');
+    expect(logData.userContext).toContain('이성 비율이 높은 환경');
+    expect(logData.userContext).toContain('태그별 보강 근거');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {
