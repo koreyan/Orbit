@@ -156,6 +156,8 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('반드시 아래 6섹션 순서로 작성합니다.');
     expect(logData.systemPrompt).toContain('인연 유입 방식 근거');
     expect(logData.systemPrompt).toContain('올해/유월 흐름 근거');
+    expect(logData.systemPrompt).toContain('1월부터 12월까지 정확히 12개 행');
+    expect(logData.systemPrompt).toContain('연도 단위로 대체하지 않습니다');
     
     // 연애 전용 컨텍스트 검증: layered prompt stack
     expect(logData.userContext).toContain('[USER_CHART_DATA]');

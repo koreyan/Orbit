@@ -49,7 +49,7 @@ const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
     primaryPalaces: ["유년", "유월 12개월", "대한", "천희/홍란", "도화성"],
     directEvidenceLimit: 12,
     requiredTags: ["timing_signal"],
-    writingInstruction: "12개월 전체 흐름을 보고 강한 달, 조심할 달, 관계 진입보다 정리와 관찰이 필요한 달을 구분한다.",
+    writingInstruction: "유월 데이터가 있으면 올해 흐름은 반드시 1월부터 12월까지 정확히 12개 행으로 작성한다. 연도 단위로 대체하지 않고, 1~6월만 쓰고 멈추지 않는다. 강한 달, 조심할 달, 관계 진입보다 정리와 관찰이 필요한 달을 구분한다.",
   },
   {
     section: "6. 지금 당장 해야 할 연애 준비",
