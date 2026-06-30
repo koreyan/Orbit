@@ -53,7 +53,7 @@ const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
     primaryPalaces: ["자녀궁/자식궁", "명궁", "도화성", "부처궁/부부궁", "복덕궁", "화기/살성"],
     directEvidenceLimit: 10,
     requiredTags: ["charm_asset", "attraction_pattern", "compatible_partner", "solo_blocker"],
-    writingInstruction: "어떤 매력이 잠재되어 있는가, 이성이 어떤 매력을 느끼는가, 성적 끌림을 하게 하는 나의 매력 포인트, 매력이 약해지는 순간, 매력을 기르는 방법 순서로 쓴다. 매력을 기르는 방법은 [CHARM_ACTION_RULES]의 실제 자녀궁/명궁 별·길성·조합 근거를 행동으로 변환한다. 관록궁/재백궁은 이 섹션 핵심 근거로 쓰지 않는다. 천이궁은 외부 반응 보조만 사용한다.",
+    writingInstruction: "어떤 매력이 잠재되어 있는가, 이성이 어떤 매력을 느끼는가, 성적 끌림을 하게 하는 나의 매력 포인트, 매력이 약해지는 순간, 매력을 기르는 방법 순서로 쓴다. 성적 끌림 포인트는 [CHARM_ACTION_RULES]의 신체 매력 단서, 분위기 매력 단서, 성적 끌림 근거를 우선 사용하고 정서적 안정감으로 대체하지 않는다. 입술, 피부, 눈, 눈빛, 골격, 체형, 상체, 어깨, 엉덩이, 몸매, 실루엣, 도화, 욕망, 자기장, 반전 매력 중 실제 매칭 근거가 있는 항목만 쓴다. 관록궁/재백궁은 이 섹션 핵심 근거로 쓰지 않는다. 천이궁은 외부 반응 보조만 사용한다.",
   },
   {
     section: "4. 인연이 들어오기 쉬운 방식",

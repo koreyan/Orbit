@@ -165,11 +165,19 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('매력이 약해지는 순간');
     expect(logData.systemPrompt).toContain('매력을 기르는 방법');
     expect(logData.systemPrompt).toContain('천이궁은 외부 반응과 인기의 보조 근거로만 사용합니다');
+    expect(logData.systemPrompt).toContain('신체에서 먼저 보이는 포인트');
+    expect(logData.systemPrompt).toContain('정서적 안정감으로 대체하지 않습니다');
+    expect(logData.systemPrompt).toContain('입술, 피부, 눈, 눈빛, 골격, 체형');
+    expect(logData.systemPrompt).toContain('직접 신체 부위 근거가 없으면 억지로 만들지 않습니다');
     expect(logData.systemPrompt).not.toContain('3-2. 정서적 매력');
     expect(logData.systemPrompt).not.toContain('3-3. 외적 매력');
     expect(logData.systemPrompt).not.toContain('| 월 | 흐름 | 해야 할 것 | 피해야 할 것 |');
     expect(logData.systemPrompt).not.toContain('질액궁');
     expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
+    expect(logData.systemPrompt).not.toContain('독서, 글쓰기, 짧은 문장 정리, 어휘 다듬기');
+    expect(logData.systemPrompt).not.toContain('정서적 매력 참고 후보');
+    expect(logData.systemPrompt).not.toContain('태양: 밝은 반응, 챙김, 인정 욕구, 외향적 따뜻함');
+    expect(logData.systemPrompt).not.toContain('무곡: 신뢰감, 책임감, 현실적 안정감');
     
     // 연애 전용 컨텍스트 검증: layered prompt stack
     expect(logData.userContext).toContain('[USER_CHART_DATA]');
@@ -189,7 +197,10 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('[CHARM_ACTION_RULES]');
     expect(logData.userContext).toContain('매력을 기르는 방법');
     expect(logData.userContext).toContain('근거:');
-    expect(logData.userContext).toContain('행동:');
+    expect(logData.userContext).toContain('신체 매력 단서:');
+    expect(logData.userContext).toContain('분위기 매력 단서:');
+    expect(logData.userContext).toContain('성적 끌림 근거:');
+    expect(logData.userContext).toContain('행동 힌트:');
     expect(logData.userContext).toContain('이성 비율이 높은 환경');
     expect(logData.userContext).toContain('태그별 보강 근거');
     expect(logData.userContext).toContain('[3-2. 잠재된 이성적 매력]');
