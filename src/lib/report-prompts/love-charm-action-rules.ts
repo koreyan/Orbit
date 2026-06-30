@@ -29,6 +29,7 @@ export interface CharmActionRule {
   physicalCharm?: string[];
   atmosphereCharm?: string[];
   sexualPullSource?: string[];
+  feltScene?: string[];
   cultivationHints?: string[];
   appealToWomen?: string[];
   appealToMen?: string[];
@@ -68,6 +69,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["기품 있는 외모", "균형 잡힌 체격", "좋은 피부", "맑은 눈"],
     atmosphereCharm: ["품위", "중심감", "쉽게 흐트러지지 않는 분위기"],
     sexualPullSource: ["정돈된 실루엣", "기준이 분명해 보이는 태도"],
+    feltScene: ["가볍게 휩쓸리지 않고 자기 기준이 있어 보이는 장면", "사람들 사이에서 말보다 태도로 중심을 잡는 장면"],
+    appealToWomen: ["여성이 쉽게 흔들리지 않는 사람이라고 느끼는 중심감", "대화 중 기준이 분명해 보여 신뢰가 생기는 태도"],
+    appealToMen: ["남성이 자연스럽게 존중하게 되는 차분한 중심감", "가볍게 들뜨지 않아 오래 보고 싶어지는 태도"],
     evidence: "자미성은 기품 있는 외모, 균형 잡힌 체격, 좋은 피부, 맑은 눈의 특징으로 설명됩니다.",
     interpretation: "과하게 드러내기보다 몸의 균형과 태도의 품위가 가까운 거리에서 매력으로 남습니다.",
     priority: 1,
@@ -82,6 +86,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["기품 있는 외모", "화려하고 우아한 인상", "넓은 이마와 턱선"],
     atmosphereCharm: ["우아함", "안정감", "관리된 분위기"],
     sexualPullSource: ["차분하게 관리된 몸의 분위기", "고급스럽게 정돈된 인상"],
+    feltScene: ["말과 선택이 과하게 들뜨지 않아 자리가 안정되는 장면", "옷차림과 태도가 깔끔하게 맞아 상대가 편하게 느끼는 장면"],
+    appealToWomen: ["여성이 대화 속도와 선택이 안정적이라고 느끼는 분위기", "과장 없이 정돈된 태도에서 신뢰를 느끼는 장면"],
+    appealToMen: ["남성이 부담 없이 다가갈 수 있는 안정된 분위기", "표정과 말투가 정돈되어 한 번 더 보고 싶어지는 장면"],
     evidence: "천부성은 기품 있는 외모와 화려하고 우아한 외모로 설명됩니다.",
     interpretation: "튀는 매력보다 안정적으로 정돈된 분위기와 우아한 인상이 끌림을 만듭니다.",
     priority: 1,
@@ -152,8 +159,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["부드러운 인상", "엉덩이", "하체 균형", "은근한 몸의 균형"],
     atmosphereCharm: ["은근함", "섬세함", "조용한 감성"],
     sexualPullSource: ["하체 균형이 주는 안정된 실루엣", "은근하게 시선이 머무는 분위기"],
-    appealToWomen: ["부드럽고 안정된 인상", "섬세하게 맞춰주는 태도", "과장되지 않은 하체 균형과 정돈된 실루엣"],
-    appealToMen: ["부드러운 분위기", "은근한 몸의 균형", "감정적으로 편하게 머물게 하는 인상"],
+    feltScene: ["상대의 속도를 보고 무리하게 밀어붙이지 않는 장면", "말투와 표정이 세지 않아 방어하지 않아도 되는 분위기"],
+    appealToWomen: ["여성이 감정적으로 몰아붙여지지 않는다고 느끼는 거리감", "조용히 맞춰주지만 존재감이 사라지지 않는 태도", "가까이 있을 때 몸의 긴장이 과하게 올라가지 않는 안정된 분위기"],
+    appealToMen: ["남성이 부담 없이 말을 이어가고 싶어지는 부드러운 반응", "처음부터 다 드러내지 않아 천천히 더 알고 싶어지는 분위기", "가까이 있을 때 시선이 오래 머무는 은근한 거리감"],
     evidence: "태음성은 부드러운 외모 분위기와 엉덩이, 곡선적인 하체 실루엣의 특징으로 설명됩니다.",
     interpretation: "노골적인 표현보다 부드러운 인상과 은근한 분위기가 가까워질수록 매력으로 살아납니다.",
     priority: 1,
@@ -210,6 +218,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["두꺼운 입술", "벌어진 눈", "건강한 피부", "귀여운 인상", "몸의 털"],
     atmosphereCharm: ["도화", "욕망", "친근한 거리감", "경험하고 싶게 만드는 분위기"],
     sexualPullSource: ["입술과 거리감 없는 태도", "본능적으로 가까워지고 싶게 하는 분위기"],
+    feltScene: ["대화가 끊기지 않고 자연스럽게 다음 주제로 이어지는 장면", "처음 만난 자리에서도 상대가 조금 더 알고 싶어지는 호기심을 느끼는 장면"],
+    appealToWomen: ["여성이 대화가 지루하지 않고 계속 이어진다고 느끼는 활기", "가까이 다가와도 부담보다 호기심이 먼저 생기는 거리감"],
+    appealToMen: ["남성이 더 말을 걸고 싶어지는 반응의 생동감", "표정과 대화 리듬이 남아 다시 연락하고 싶어지는 장면"],
     evidence: "탐랑성은 욕망과 욕구, 도화의 성질이 강하며 두꺼운 입술, 벌어진 눈, 건강한 피부, 귀여운 인상으로 설명됩니다.",
     interpretation: "외모 하나보다 입술과 거리감 없는 친근함이 합쳐져 본능적인 호기심을 만듭니다.",
     priority: 1,
@@ -238,6 +249,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["턱뼈", "하얀 피부", "이국적 외모", "미남미녀형 인상"],
     atmosphereCharm: ["차도화", "정신적 도화", "자기장", "카리스마", "영향력"],
     sexualPullSource: ["단정함 안에 압축된 긴장감", "쉽게 벗어나기 어려운 분위기"],
+    feltScene: ["말이 많지 않아도 대화가 끝난 뒤 한 번 더 떠오르는 장면", "단정한 태도 안에 쉽게 읽히지 않는 긴장감이 남는 장면"],
+    appealToWomen: ["여성이 조용하지만 쉽게 가볍게 볼 수 없다고 느끼는 긴장감", "대화 후에도 한 번 더 생각나는 단정한 존재감"],
+    appealToMen: ["남성이 표정과 거리감을 더 알고 싶어지는 긴장감", "차분해 보이지만 쉽게 예측되지 않아 시선이 남는 장면"],
     evidence: "염정성은 차도화, 정신적 도화, 자기장과 영향력, 턱뼈와 하얀 피부, 이국적 외모로 설명됩니다.",
     interpretation: "노골적으로 드러내지 않아도 사람을 붙잡아두는 자기장과 이국적 분위기가 생깁니다.",
     priority: 1,
@@ -280,6 +294,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["단정한 실루엣", "우아한 인상"],
     atmosphereCharm: ["우아함 속 반전 매력", "규범적 겉모습과 다른 안쪽의 섹시함"],
     sexualPullSource: ["단정함과 반전 분위기의 대비"],
+    feltScene: ["겉으로는 차분한데 가까워질수록 장난기나 열정이 드러나는 장면", "예상보다 생동감 있는 반응이 나와 상대의 시선이 오래 머무는 장면"],
+    appealToWomen: ["여성이 차분함 뒤의 장난기와 열정에 호기심을 느끼는 장면", "단정한 첫인상과 가까워진 뒤의 긴장감이 대비되는 매력"],
+    appealToMen: ["남성이 얌전해 보이다가 예상 밖의 생동감에 다시 보게 되는 장면", "차분한 표정 뒤의 열정이 궁금해지는 반전"],
     evidence: "염정-천상 조합은 겉으로는 우아하지만 안쪽에 섹시한 반전 매력이 있다고 설명됩니다.",
     interpretation: "겉으로 단정해 보이는 분위기 안에 예상 밖의 반전이 있어 시선이 오래 머뭅니다.",
     priority: 0,
@@ -308,6 +325,9 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     physicalCharm: ["날카로운 인상", "선명한 얼굴선"],
     atmosphereCharm: ["카리스마", "리더십", "냉철한 판단력"],
     sexualPullSource: ["강인함과 사교성이 같이 보이는 긴장감"],
+    feltScene: ["필요한 순간 망설이지 않고 방향을 정하는 장면", "강한 인상이 일방적 압박이 아니라 상황을 정리하는 힘으로 보이는 장면"],
+    appealToWomen: ["여성이 결정해야 할 순간에 의지할 수 있다고 느끼는 단단함", "강하지만 상대 속도를 확인하는 태도에서 생기는 긴장감"],
+    appealToMen: ["남성이 쉽게 휘둘리지 않는 사람이라고 느끼는 선명함", "분위기를 정리하는 힘 때문에 한 번 더 시선이 가는 장면"],
     evidence: "염정-칠살 조합은 사교성을 갖춘 강력한 카리스마와 리더십의 매력으로 설명됩니다.",
     interpretation: "강하고 선명한 분위기가 부담이 아니라 끌림으로 작동할 수 있는 조합입니다.",
     priority: 0,
@@ -497,31 +517,32 @@ const getTargetAudience = (userGender?: string): string => {
 };
 
 const getAppealDirection = (rule: CharmActionRule, userGender?: string): string[] | undefined => {
-  if (userGender === "M") return rule.appealToWomen || rule.sexualPullSource || rule.atmosphereCharm;
-  if (userGender === "F") return rule.appealToMen || rule.sexualPullSource || rule.atmosphereCharm;
-  return rule.sexualPullSource || rule.atmosphereCharm;
+  if (userGender === "M") return rule.appealToWomen || rule.feltScene || rule.sexualPullSource || rule.atmosphereCharm;
+  if (userGender === "F") return rule.appealToMen || rule.feltScene || rule.sexualPullSource || rule.atmosphereCharm;
+  return rule.feltScene || rule.sexualPullSource || rule.atmosphereCharm;
 };
 
 export const formatCharmActionRules = (rules: MatchedCharmActionRule[], userGender?: string): string => {
   const targetAudience = getTargetAudience(userGender);
 
   if (rules.length === 0) {
-    return `[CHARM_ACTION_RULES]\n- 대상 이성: ${targetAudience}\n- 매칭된 자녀궁/명궁 기반 매력 룰 없음\n  - 근거: 실제 자녀궁/명궁 별과 길성 조합을 추가 확인해야 합니다.\n  - 신체 매력 단서: 해당 없음\n  - 분위기 매력 단서: 해당 없음\n  - 성적 끌림 근거: 해당 없음\n  - ${targetAudience}에게 어필되는 변환: 해당 없음\n  - 행동 힌트: 보편 조언을 쓰지 말고, 사용자의 실제 명반 데이터에서 확인되는 표현 방식만 짧게 설명합니다.`;
+    return `[CHARM_ACTION_RULES]\n- 대상 이성: ${targetAudience}\n- 매칭된 자녀궁/명궁 기반 매력 룰 없음\n  - 원본 근거 요약: 실제 자녀궁/명궁 별과 길성 조합을 추가 확인해야 합니다.\n  - 신체 단서(보조): 해당 없음\n  - 분위기/반응 단서: 해당 없음\n  - 상대 이성이 체감하는 장면: 해당 없음\n  - ${targetAudience}에게 어필되는 장면: 해당 없음\n  - 행동 힌트: 보편 조언을 쓰지 말고, 사용자의 실제 명반 데이터에서 확인되는 표현 방식만 짧게 설명합니다.`;
   }
 
   return `
 [CHARM_ACTION_RULES]
 - 대상 이성: ${targetAudience}
-- 성별 변환 원칙: 유저의 성별 표현을 바꾸지 말고, ${targetAudience}에게 어필되는 매력 방향으로만 변환합니다.
+- 성별 변환 원칙: 유저의 성별 표현을 바꾸지 말고, ${targetAudience}에게 어필되는 체감 장면으로만 변환합니다.
+- 출력 원칙: 신체 단서는 보조 근거로만 두고, 최종 문장은 상대 이성이 보는 시선, 거리감, 반응, 몸의 긴장감, 대화 후 기억에 남는 장면을 중심으로 씁니다.
 ${rules.map((rule) => `- 매칭 궁: ${rule.matchedPalace}
   - 매칭 별/조합: ${rule.stars.join(", ")}
   - 축: ${axisLabels[rule.charmAxis]}
   - 근거 유형: ${rule.evidenceKind || "cultivation"}
-  - 신체 매력 단서: ${formatList(rule.physicalCharm)}
-  - 분위기 매력 단서: ${formatList(rule.atmosphereCharm)}
-  - 성적 끌림 근거: ${formatList(rule.sexualPullSource)}
-  - ${targetAudience}에게 어필되는 변환: ${formatList(getAppealDirection(rule, userGender))}
-  - 근거: ${rule.evidence}
+  - 원본 근거 요약: ${rule.evidence}
+  - 신체 단서(보조): ${formatList(rule.physicalCharm)}
+  - 분위기/반응 단서: ${formatList(rule.atmosphereCharm)}
+  - 상대 이성이 체감하는 장면: ${formatList(rule.feltScene || rule.sexualPullSource || rule.atmosphereCharm)}
+  - ${targetAudience}에게 어필되는 장면: ${formatList(getAppealDirection(rule, userGender))}
   - 해석: ${rule.interpretation}
   - 행동 힌트: ${formatList(rule.cultivationHints || (rule.actionGuide ? [rule.actionGuide] : undefined))}`).join("\n")}
 `;
