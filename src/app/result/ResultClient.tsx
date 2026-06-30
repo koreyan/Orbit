@@ -110,12 +110,6 @@ export default function ResultClient({
     }
   };
 
-  // DB에서 가져온 해석 정보를 렌더링 변수로 할당
-  const targetStarNames = interpretation.primaryStars.join(', ');
-  const interpretationTitle = interpretation.borrowed 
-    ? `당신의 천이궁에 숨겨진, [${targetStarNames}]의 특별한 진짜 모습입니다! ✨` 
-    : `당신의 진짜 모습을 결정짓는 핵심 별자리 [${targetStarNames}]입니다 ✨`;
-
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-150 fill-mode-both max-w-4xl mx-auto">
       
@@ -442,32 +436,6 @@ export default function ResultClient({
             
           </div>
         )}
-      </div>
-
-      {/* Free Interpretation Section */}
-      <div className="w-full">
-        <div className="bg-gradient-to-br from-primary/10 to-orange-500/5 backdrop-blur-md rounded-3xl border border-primary/20 p-6 md:p-8 shadow-lg relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 p-4 opacity-10 pointer-events-none">
-            <Sparkles className="w-48 h-48 text-primary" />
-          </div>
-          <div className="relative z-10">
-            <h3 className="text-sm md:text-base font-bold text-primary mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" />
-              무료 기초 해석
-            </h3>
-            <p className="text-lg md:text-xl font-bold text-white mb-4 leading-snug">
-              {interpretationTitle}
-            </p>
-            <div className="bg-black/30 rounded-2xl p-5 border border-white/10 shadow-inner">
-              <p className="text-white/90 leading-relaxed text-sm md:text-base whitespace-pre-wrap">
-                {interpretation.coreTrait}
-              </p>
-            </div>
-            <p className="text-xs text-white/50 mt-5 text-center flex items-center justify-center gap-1">
-              이외의 11개 궁과 더 디테일한 운세 흐름은 아래 테마를 선택해 확인하세요.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Theme Selection */}
