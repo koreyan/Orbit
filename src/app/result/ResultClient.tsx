@@ -45,6 +45,8 @@ export default function ResultClient({
   const [theme, setTheme] = useState<"career" | "love" | "hobby" | "">("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const disabledThemeCardClassName = "relative flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 cursor-not-allowed overflow-hidden grayscale saturate-0 opacity-55";
+
   // 상태 관리: 대한 인덱스와 유년 연도
   const [selectedDaHanIndex, setSelectedDaHanIndex] = useState<number>(() => {
     const currentYear = new Date().getFullYear();
@@ -86,7 +88,7 @@ export default function ResultClient({
     
     setIsCreatingOrder(true);
     try {
-      const amount = theme === "career" || theme === "love" ? 990 : 500;
+      const amount = theme === "love" ? 0 : theme === "career" ? 990 : 500;
       const { createAnonymousOrderAction } = await import("@/app/actions/order");
       
       const { orderId } = await createAnonymousOrderAction({
@@ -479,20 +481,26 @@ export default function ResultClient({
             className="flex flex-col gap-4 flex-1"
           >
             <div>
-              <RadioGroupItem value="career" id="theme-career" className="peer sr-only" />
+              <RadioGroupItem value="career" id="theme-career" className="peer sr-only" disabled />
               <Label
                 htmlFor="theme-career"
-                className={`flex items-center gap-4 rounded-2xl border p-5 cursor-pointer transition-all ${theme === 'career' ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'}`}
+                aria-disabled="true"
+                className={disabledThemeCardClassName}
               >
-                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-                  <Briefcase className="w-6 h-6 text-blue-400" />
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                  <span className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-bold text-white/85 shadow-lg">
+                    준비중
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <Briefcase className="w-6 h-6 text-blue-200/60" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-lg font-bold text-white">나의 잠재력과 커리어</h4>
-                  <p className="text-sm text-white/60 mt-1">타고난 강점을 극대화하는 나만의 커리어 활용법</p>
+                  <h4 className="text-lg font-bold text-white/60">나의 잠재력과 커리어</h4>
+                  <p className="text-sm text-white/35 mt-1">타고난 강점을 극대화하는 나만의 커리어 활용법</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-blue-400">990원</span>
+                  <span className="text-lg font-bold text-white/35">990원</span>
                 </div>
               </Label>
             </div>
@@ -511,26 +519,32 @@ export default function ResultClient({
                   <p className="text-sm text-white/60 mt-1">고유한 매력 자산을 바탕으로 한 나만의 관계 활용법</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-pink-400">990원</span>
+                  <span className="text-lg font-bold text-pink-400">0원</span>
                 </div>
               </Label>
             </div>
 
             <div>
-              <RadioGroupItem value="hobby" id="theme-hobby" className="peer sr-only" />
+              <RadioGroupItem value="hobby" id="theme-hobby" className="peer sr-only" disabled />
               <Label
                 htmlFor="theme-hobby"
-                className={`flex items-center gap-4 rounded-2xl border p-5 cursor-pointer transition-all ${theme === 'hobby' ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'}`}
+                aria-disabled="true"
+                className={disabledThemeCardClassName}
               >
-                <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                  <Gamepad2 className="w-6 h-6 text-emerald-400" />
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                  <span className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-bold text-white/85 shadow-lg">
+                    준비중
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Gamepad2 className="w-6 h-6 text-emerald-200/60" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-lg font-bold text-white">나를 채우는 여가와 웰니스</h4>
-                  <p className="text-sm text-white/60 mt-1">내 성향에 맞춰 심리적 만족감을 높여주는 나만의 라이프 활용법</p>
+                  <h4 className="text-lg font-bold text-white/60">나를 채우는 여가와 웰니스</h4>
+                  <p className="text-sm text-white/35 mt-1">내 성향에 맞춰 심리적 만족감을 높여주는 나만의 라이프 활용법</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-emerald-400">500원</span>
+                  <span className="text-lg font-bold text-white/35">500원</span>
                 </div>
               </Label>
             </div>

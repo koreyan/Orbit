@@ -36,7 +36,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
 
   const expectedAmount = order.amount;
   
-  if (!expectedAmount || Number(amount) !== expectedAmount) {
+  if (expectedAmount === null || expectedAmount === undefined || Number(amount) !== expectedAmount) {
     // 악의적인 금액 변조가 감지된 경우 결제 취소(실패) 페이지로 강제 리다이렉트
     redirect(`/checkout/fail?code=AMOUNT_TAMPERED&message=${encodeURIComponent("결제 금액이 변조되어 결제가 자동 취소되었습니다.")}`);
   }

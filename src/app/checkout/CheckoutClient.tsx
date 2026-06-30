@@ -14,7 +14,7 @@ const CUSTOMER_KEY = "GUEST_" + Math.random().toString(36).substring(2, 10);
 
 const THEME_MAP: Record<string, { title: string; price: number }> = {
   career: { title: "나의 잠재력과 커리어", price: 990 },
-  love: { title: "나만의 매력과 관계", price: 990 },
+  love: { title: "나만의 매력과 관계", price: 0 },
   hobby: { title: "나를 채우는 여가와 웰니스", price: 500 },
 };
 
@@ -52,6 +52,9 @@ export default function CheckoutClient() {
         const tInfo = THEME_MAP[orderData.theme] || { title: "알 수 없는 테마", price: orderData.amount };
         setThemeInfo(tInfo);
         setAmount(orderData.amount);
+        if (orderData.amount === 0) {
+          setIsReady(true);
+        }
       } catch (err: unknown) {
         setErrorMsg(getErrorMessage(err, "주문 정보를 불러오는데 실패했습니다."));
       }
@@ -61,7 +64,7 @@ export default function CheckoutClient() {
 
   // 2. 토스 위젯 초기화
   useEffect(() => {
-    if (!order || initRef.current) return; // 주문이 로드된 후 한 번만 초기화
+    if (!order || order.amount === 0 || initRef.current) return; // 주문이 로드된 후 한 번만 초기화
     initRef.current = true;
 
     async function initializeTossPayments() {
@@ -110,7 +113,14 @@ export default function CheckoutClient() {
   }, [widgets, amount]);
 
   const handlePayment = async () => {
-    if (!widgets || !orderId) return;
+    if (!orderId) return;
+
+    if (order?.amount === 0) {
+      window.location.href = `/checkout/success?orderId=${orderId}&paymentKey=free_${Date.now()}&amount=0&theme=${order.theme}`;
+      return;
+    }
+
+    if (!widgets) return;
 
     // E2E 녹화용 Toss 우회
     if (process.env.NEXT_PUBLIC_E2E_MOCK === 'true') {
@@ -154,16 +164,26 @@ export default function CheckoutClient() {
       {/* Left: Toss Payments Widgets */}
       <div className="flex-1 space-y-4">
         <div className="rounded-2xl overflow-hidden relative min-h-[400px]">
-          {!isReady && (
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          {order?.amount === 0 ? (
+            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-pink-500/20 bg-pink-500/5 p-8 text-center">
+              <CreditCard className="mb-4 h-8 w-8 text-pink-300" />
+              <p className="text-lg font-bold text-white">테스트 기간 무료 제공</p>
+              <p className="mt-2 text-sm text-white/50">결제수단 입력 없이 0원으로 진행됩니다.</p>
             </div>
+          ) : (
+            <>
+              {!isReady && (
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
+              {/* 토스페이먼츠 위젯이 기본적으로 흰색 배경이므로, CSS 필터를 통해 다크 모드로 변환합니다. */}
+              <div className="relative z-0 [filter:invert(0.93)_hue-rotate(180deg)_brightness(1.1)] mix-blend-screen opacity-90 transition-opacity duration-500">
+                <div id="payment-method" className="w-full"></div>
+                <div id="agreement" className="w-full mt-4"></div>
+              </div>
+            </>
           )}
-          {/* 토스페이먼츠 위젯이 기본적으로 흰색 배경이므로, CSS 필터를 통해 다크 모드로 변환합니다. */}
-          <div className="relative z-0 [filter:invert(0.93)_hue-rotate(180deg)_brightness(1.1)] mix-blend-screen opacity-90 transition-opacity duration-500">
-            <div id="payment-method" className="w-full"></div>
-            <div id="agreement" className="w-full mt-4"></div>
-          </div>
         </div>
       </div>
 
@@ -197,7 +217,7 @@ export default function CheckoutClient() {
               className="w-full h-14 rounded-xl bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-lg font-bold shadow-[0_4px_14px_0_rgba(255,107,53,0.39)] transition-all disabled:opacity-50"
             >
               <CreditCard className="mr-2 w-5 h-5" />
-              {amount.toLocaleString()}원 결제하기
+              {order?.amount === 0 ? "0원으로 시작하기" : `${amount.toLocaleString()}원 결제하기`}
             </Button>
             
             <button 

@@ -9,8 +9,43 @@ export async function confirmPaymentAction(params: {
 }) {
   const { paymentKey, orderId, amount } = params;
 
-  if (!paymentKey || !orderId || !amount) {
+  if (!paymentKey || !orderId || Number.isNaN(amount) || amount < 0) {
     throw new Error("결제 승인에 필요한 파라미터가 누락되었습니다.");
+  }
+
+  if (paymentKey.startsWith("free_")) {
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+    const adminClient = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error: orderError } = await adminClient
+      .from("orders")
+      .update({ status: "paid", updated_at: new Date().toISOString() })
+      .eq("id", orderId);
+
+    if (orderError) {
+      console.error("Free order update failed:", orderError);
+      throw new Error("무료 결제 처리 중 오류가 발생했습니다.");
+    }
+
+    const { error: paymentError } = await adminClient
+      .from("payments")
+      .insert({
+        order_id: orderId,
+        payment_key: paymentKey,
+        amount: 0,
+        method: "무료결제",
+        status: "done",
+        paid_at: new Date().toISOString(),
+      });
+
+    if (paymentError) {
+      console.error("Failed to insert free payment record:", JSON.stringify(paymentError));
+    }
+
+    return { success: true, paymentData: { totalAmount: 0, method: "무료결제", status: "DONE" } };
   }
 
   // E2E 테스트용 mock 결제 우회
