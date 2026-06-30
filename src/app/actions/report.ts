@@ -580,7 +580,7 @@ ${commonRules}`
       spousePalace: extractedStars['夫妻'],
       fortunePalace: extractedStars['福德'],
       migrationPalace: extractedStars['遷移'],
-    }));
+    }), saju_data?.gender || '');
 
     themeSpecificContext = `
 [USER_CHART_DATA]

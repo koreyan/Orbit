@@ -30,6 +30,8 @@ export interface CharmActionRule {
   atmosphereCharm?: string[];
   sexualPullSource?: string[];
   cultivationHints?: string[];
+  appealToWomen?: string[];
+  appealToMen?: string[];
   evidenceKind?: CharmEvidenceKind;
   priority: number;
 }
@@ -147,11 +149,13 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
     stars: ["태음"],
     charmAxis: "sexual_pull",
     evidenceKind: "physical",
-    physicalCharm: ["여성스럽고 예쁜 외모", "엉덩이", "부드러운 곡선", "하체 실루엣"],
+    physicalCharm: ["부드러운 인상", "엉덩이", "하체 균형", "은근한 몸의 균형"],
     atmosphereCharm: ["은근함", "섬세함", "조용한 감성"],
-    sexualPullSource: ["몸의 곡선이 부드럽게 남는 인상", "은근하게 시선이 머무는 분위기"],
-    evidence: "태음성은 여성스럽고 예쁜 외모와 엉덩이 특징으로 설명됩니다.",
-    interpretation: "노골적인 표현보다 부드러운 곡선과 은근한 분위기가 가까워질수록 매력으로 살아납니다.",
+    sexualPullSource: ["하체 균형이 주는 안정된 실루엣", "은근하게 시선이 머무는 분위기"],
+    appealToWomen: ["부드럽고 안정된 인상", "섬세하게 맞춰주는 태도", "과장되지 않은 하체 균형과 정돈된 실루엣"],
+    appealToMen: ["부드러운 분위기", "은근한 몸의 균형", "감정적으로 편하게 머물게 하는 인상"],
+    evidence: "태음성은 부드러운 외모 분위기와 엉덩이, 곡선적인 하체 실루엣의 특징으로 설명됩니다.",
+    interpretation: "노골적인 표현보다 부드러운 인상과 은근한 분위기가 가까워질수록 매력으로 살아납니다.",
     priority: 1,
   },
   {
@@ -315,7 +319,7 @@ export const LOVE_CHARM_ACTION_RULES: CharmActionRule[] = [
   cultivationRule("천동", "입가와 피부의 부드러운 인상이 매력으로 보입니다.", ["편한 질문으로 대화 압박을 낮추기", "웃는 타이밍과 입가의 긴장을 자연스럽게 풀기"]),
   cultivationRule("염정", "이국적 분위기와 자기장이 매력으로 보입니다.", ["단정한 외형은 유지하되 초반 통제감을 줄이기", "선명한 인상을 살리는 색감과 실루엣 정리하기"]),
   cultivationRule("천부", "우아하고 안정적인 분위기가 매력으로 보입니다.", ["상대를 챙기되 대신 결정하지 않기", "옷차림과 공간 선택에서 안정된 취향을 보여주기"]),
-  cultivationRule("태음", "부드러운 곡선과 은근한 분위기가 매력으로 보입니다.", ["감각적 취향을 대화 소재로 자연스럽게 꺼내기", "몸의 곡선이 과장되지 않게 실루엣을 정돈하기"]),
+  cultivationRule("태음", "부드럽고 안정된 인상과 은근한 분위기가 매력으로 보입니다.", ["감각적 취향을 대화 소재로 자연스럽게 꺼내기", "몸의 선을 과장하기보다 전체 실루엣과 태도를 정돈하기"]),
   cultivationRule("탐랑", "입술과 친근한 거리감, 도화 분위기가 매력으로 보입니다.", ["새로운 경험과 대화 주제를 늘리기", "호감 표현은 살리되 과한 자기중심적 어필 줄이기"]),
   cultivationRule("거문", "입매와 깊이 있는 말이 매력으로 보입니다.", ["비판보다 질문으로 시작하기", "메시지의 날카로운 표현을 한 번 부드럽게 바꾸기"]),
   cultivationRule("천상", "긴 실루엣과 조율된 분위기가 매력으로 보입니다.", ["상대가 편해지는 선택지를 제안하기", "자세와 말투의 균형을 일정하게 유지하기"]),
@@ -486,13 +490,29 @@ export const matchCharmActionRules = (input: {
 
 const formatList = (items?: string[]): string => items && items.length > 0 ? items.join(", ") : "해당 없음";
 
-export const formatCharmActionRules = (rules: MatchedCharmActionRule[]): string => {
+const getTargetAudience = (userGender?: string): string => {
+  if (userGender === "M") return "여성";
+  if (userGender === "F") return "남성";
+  return "이성";
+};
+
+const getAppealDirection = (rule: CharmActionRule, userGender?: string): string[] | undefined => {
+  if (userGender === "M") return rule.appealToWomen || rule.sexualPullSource || rule.atmosphereCharm;
+  if (userGender === "F") return rule.appealToMen || rule.sexualPullSource || rule.atmosphereCharm;
+  return rule.sexualPullSource || rule.atmosphereCharm;
+};
+
+export const formatCharmActionRules = (rules: MatchedCharmActionRule[], userGender?: string): string => {
+  const targetAudience = getTargetAudience(userGender);
+
   if (rules.length === 0) {
-    return `[CHARM_ACTION_RULES]\n- 매칭된 자녀궁/명궁 기반 매력 룰 없음\n  - 근거: 실제 자녀궁/명궁 별과 길성 조합을 추가 확인해야 합니다.\n  - 신체 매력 단서: 해당 없음\n  - 분위기 매력 단서: 해당 없음\n  - 성적 끌림 근거: 해당 없음\n  - 행동 힌트: 보편 조언을 쓰지 말고, 사용자의 실제 명반 데이터에서 확인되는 표현 방식만 짧게 설명합니다.`;
+    return `[CHARM_ACTION_RULES]\n- 대상 이성: ${targetAudience}\n- 매칭된 자녀궁/명궁 기반 매력 룰 없음\n  - 근거: 실제 자녀궁/명궁 별과 길성 조합을 추가 확인해야 합니다.\n  - 신체 매력 단서: 해당 없음\n  - 분위기 매력 단서: 해당 없음\n  - 성적 끌림 근거: 해당 없음\n  - ${targetAudience}에게 어필되는 변환: 해당 없음\n  - 행동 힌트: 보편 조언을 쓰지 말고, 사용자의 실제 명반 데이터에서 확인되는 표현 방식만 짧게 설명합니다.`;
   }
 
   return `
 [CHARM_ACTION_RULES]
+- 대상 이성: ${targetAudience}
+- 성별 변환 원칙: 유저의 성별 표현을 바꾸지 말고, ${targetAudience}에게 어필되는 매력 방향으로만 변환합니다.
 ${rules.map((rule) => `- 매칭 궁: ${rule.matchedPalace}
   - 매칭 별/조합: ${rule.stars.join(", ")}
   - 축: ${axisLabels[rule.charmAxis]}
@@ -500,6 +520,7 @@ ${rules.map((rule) => `- 매칭 궁: ${rule.matchedPalace}
   - 신체 매력 단서: ${formatList(rule.physicalCharm)}
   - 분위기 매력 단서: ${formatList(rule.atmosphereCharm)}
   - 성적 끌림 근거: ${formatList(rule.sexualPullSource)}
+  - ${targetAudience}에게 어필되는 변환: ${formatList(getAppealDirection(rule, userGender))}
   - 근거: ${rule.evidence}
   - 해석: ${rule.interpretation}
   - 행동 힌트: ${formatList(rule.cultivationHints || (rule.actionGuide ? [rule.actionGuide] : undefined))}`).join("\n")}

@@ -62,7 +62,7 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
         extracted_stars: {
           '命宮': { name: '명궁', majorStars: [{ name: '태양성' }, { name: '천동성', sihua: '화기' }] },
           '夫妻': { name: '부처궁', majorStars: [{ name: '자미성' }] },
-          '子女': { name: '자녀궁', majorStars: [{ name: '탐랑성' }] },
+          '子女': { name: '자녀궁', majorStars: [{ name: theme === 'love' ? '태음' : '탐랑성' }] },
           '財帛': { name: '재백궁', luckyStars: [{ name: '녹존' }] },
           '疾厄': { name: '질액궁', unluckyStars: [{ name: '경양' }] },
           '官祿': { name: '관록궁', majorStars: [{ name: '천기성' }] },
@@ -169,6 +169,11 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('정서적 안정감으로 대체하지 않습니다');
     expect(logData.systemPrompt).toContain('입술, 피부, 눈, 눈빛, 골격, 체형');
     expect(logData.systemPrompt).toContain('직접 신체 부위 근거가 없으면 억지로 만들지 않습니다');
+    expect(logData.systemPrompt).toContain('남성 리포트는 여성에게 어필되는 매력으로 변환합니다');
+    expect(logData.systemPrompt).toContain('여성 리포트는 남성에게 어필되는 매력으로 변환합니다');
+    expect(logData.systemPrompt).not.toContain('여성스럽다');
+    expect(logData.systemPrompt).not.toContain('예쁜 여자');
+    expect(logData.systemPrompt).not.toContain('여성적인 외모');
     expect(logData.systemPrompt).not.toContain('3-2. 정서적 매력');
     expect(logData.systemPrompt).not.toContain('3-3. 외적 매력');
     expect(logData.systemPrompt).not.toContain('| 월 | 흐름 | 해야 할 것 | 피해야 할 것 |');
@@ -200,6 +205,12 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('신체 매력 단서:');
     expect(logData.userContext).toContain('분위기 매력 단서:');
     expect(logData.userContext).toContain('성적 끌림 근거:');
+    expect(logData.userContext).toContain('대상 이성: 여성');
+    expect(logData.userContext).toContain('여성에게 어필되는 변환:');
+    expect(logData.userContext).toContain('부드럽고 안정된 인상');
+    expect(logData.userContext).not.toContain('여성스럽고 예쁜 외모');
+    expect(logData.userContext).not.toContain('매끄러운 몸의 곡선');
+    expect(logData.userContext).not.toContain('몸의 곡선이 부드럽게 남는 인상');
     expect(logData.userContext).toContain('행동 힌트:');
     expect(logData.userContext).toContain('이성 비율이 높은 환경');
     expect(logData.userContext).toContain('태그별 보강 근거');
