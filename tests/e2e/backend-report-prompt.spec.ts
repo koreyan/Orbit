@@ -156,11 +156,18 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('반드시 아래 6섹션 순서로 작성합니다.');
     expect(logData.systemPrompt).toContain('인연 유입 방식 근거');
     expect(logData.systemPrompt).toContain('올해/유월 흐름 근거');
-    expect(logData.systemPrompt).toContain('1월부터 12월까지 정확히 12개 행');
-    expect(logData.systemPrompt).toContain('연도 단위로 대체하지 않습니다');
-    expect(logData.systemPrompt).toContain('현재 매력 → 매력이 흐려지는 순간 → 기르는 방법');
-    expect(logData.systemPrompt).toContain('외적 매력 섹션에서는 배려, 정서적 지지, 깊은 대화, 자기 성찰을 반복하지 않습니다');
-    expect(logData.systemPrompt).toContain('천이궁은 외적 매력의 핵심 근거가 아니라, 밖에서 드러나는 대외 반응과 인기의 보조 근거로만 사용합니다');
+    expect(logData.systemPrompt).toContain('올해운');
+    expect(logData.systemPrompt).toContain('1월:');
+    expect(logData.systemPrompt).toContain('3-2. 잠재된 이성적 매력');
+    expect(logData.systemPrompt).toContain('어떤 매력이 잠재되어 있는가');
+    expect(logData.systemPrompt).toContain('이성이 어떤 매력을 느끼는가');
+    expect(logData.systemPrompt).toContain('성적 끌림을 하게 하는 나의 매력 포인트');
+    expect(logData.systemPrompt).toContain('매력이 약해지는 순간');
+    expect(logData.systemPrompt).toContain('매력을 기르는 방법');
+    expect(logData.systemPrompt).toContain('천이궁은 외부 반응과 인기의 보조 근거로만 사용합니다');
+    expect(logData.systemPrompt).not.toContain('3-2. 정서적 매력');
+    expect(logData.systemPrompt).not.toContain('3-3. 외적 매력');
+    expect(logData.systemPrompt).not.toContain('| 월 | 흐름 | 해야 할 것 | 피해야 할 것 |');
     expect(logData.systemPrompt).not.toContain('질액궁');
     expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
     
@@ -170,10 +177,22 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('[DYNAMIC_DB_EVIDENCE]');
     expect(logData.userContext).toContain('[SECTION_EVIDENCE_MAP]');
     expect(logData.userContext).toContain('[MONTHLY_LIUYUE_FLOW]');
+    expect(logData.userContext).toContain('- 1월');
+    expect(logData.userContext).toContain('- 12월');
+    expect(logData.userContext).toContain('월별 중심 궁위:');
+    expect(logData.userContext).toContain('주요 별:');
+    expect(logData.userContext).toContain('호감/인연 신호:');
+    expect(logData.userContext).toContain('주의 신호:');
+    expect(logData.userContext).toContain('해석 근거:');
+    expect(logData.userContext).toContain('예상 상황:');
+    expect(logData.userContext).toContain('행동 힌트:');
+    expect(logData.userContext).toContain('[CHARM_ACTION_RULES]');
+    expect(logData.userContext).toContain('매력을 기르는 방법');
+    expect(logData.userContext).toContain('근거:');
+    expect(logData.userContext).toContain('행동:');
     expect(logData.userContext).toContain('이성 비율이 높은 환경');
     expect(logData.userContext).toContain('태그별 보강 근거');
-    expect(logData.userContext).toContain('[3-2. 정서적 매력]');
-    expect(logData.userContext).toContain('[3-3. 외적 매력]');
+    expect(logData.userContext).toContain('[3-2. 잠재된 이성적 매력]');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {

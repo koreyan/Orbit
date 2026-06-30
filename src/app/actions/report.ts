@@ -7,6 +7,8 @@ import { fetchKnowledgeBaseByLoveTags, fetchKnowledgeBaseForLove, fetchKnowledge
 import { getLoveSystemPrompt } from "@/lib/report-prompts/love-system-prompt";
 import { LOVE_ZIWEI_FIXED_REFERENCE } from "@/lib/report-prompts/love-ziwei-reference";
 import { formatLoveSectionEvidenceMap, formatMonthlyLiuyueFlow } from "@/lib/report-prompts/love-evidence-map";
+import type { MonthlyLiuyueEvidence } from "@/lib/report-prompts/love-evidence-map";
+import { formatCharmActionRules, matchCharmActionRules } from "@/lib/report-prompts/love-charm-action-rules";
 import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -15,6 +17,59 @@ import type { LiunianData, ZiweiChart } from "@/lib/ziwei-types";
 import { translateZiwei } from "@/lib/ziwei-translator";
 import fs from "node:fs";
 import path from "node:path";
+
+const AFFECTION_SIGNAL_STARS = ["천희", "홍란", "탐랑", "염정", "문창", "문곡", "화록", "녹존", "록존"];
+const CAUTION_SIGNAL_STARS = ["화기", "화성", "영성", "경양", "타라"];
+
+const collectStarTerms = (palace?: ExtractedPalace | null): string[] => {
+  if (!palace) return [];
+  return [
+    ...(palace.majorStars || []),
+    ...(palace.luckyStars || []),
+    ...(palace.unluckyStars || []),
+  ].flatMap((star) => [star.name, star.sihua].filter(Boolean) as string[]);
+};
+
+const filterSignals = (terms: string[], signalStars: string[]): string[] => {
+  return signalStars.filter((signal) => terms.includes(signal));
+};
+
+const buildMonthlyLiuyueEvidence = (input: {
+  month: number;
+  centerPalace: string;
+  palace?: ExtractedPalace | null;
+}): MonthlyLiuyueEvidence => {
+  const terms = collectStarTerms(input.palace);
+  const affectionSignals = filterSignals(terms, AFFECTION_SIGNAL_STARS);
+  const cautionSignals = filterSignals(terms, CAUTION_SIGNAL_STARS);
+  const majorStars = input.palace ? formatPalaceStars(input.palace) : "데이터 없음";
+
+  const hasAffectionSignal = affectionSignals.length > 0;
+  const hasCautionSignal = cautionSignals.length > 0;
+
+  return {
+    month: input.month,
+    centerPalace: input.centerPalace,
+    majorStars,
+    affectionSignals,
+    cautionSignals,
+    evidenceReason: hasAffectionSignal
+      ? `${affectionSignals.join(", ")} 신호가 있어 호감과 표현 반응을 볼 수 있습니다.`
+      : hasCautionSignal
+        ? `${cautionSignals.join(", ")} 신호가 있어 감정 속도와 예민함을 조절해야 합니다.`
+        : `${input.centerPalace} 흐름과 주요 별을 중심으로 강한 사건보다 관찰과 준비에 둡니다.`,
+    expectedSituation: hasAffectionSignal
+      ? "짧은 대화, 가벼운 접점, 밖에서의 반응처럼 관계의 입구가 열리기 쉽습니다."
+      : hasCautionSignal
+        ? "상대의 작은 반응을 크게 해석하거나 관계 속도를 급하게 잡기 쉬운 달입니다."
+        : "강한 진전보다 기존 관계를 정리하고 다음 접점을 준비하는 흐름에 가깝습니다.",
+    actionHint: hasAffectionSignal
+      ? "긴 고백보다 짧은 만남과 가벼운 대화 횟수를 늘립니다."
+      : hasCautionSignal
+        ? "고백이나 확정 요구보다 하루 이상 두고 감정을 정리합니다."
+        : "새로운 결론을 내리기보다 연락 방식과 만남 환경을 점검합니다.",
+  };
+};
 
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
@@ -209,8 +264,13 @@ ${yearsInfo}
         const monthlyItems = (liunian.liuyue || []).map((monthInfo) => {
           const monthlyPalace = Object.entries(chartData.palaces).find(([, palace]) => palace.zhi === monthInfo.mingGongZhi);
           const natalPalaceName = monthlyPalace?.[0] || monthInfo.natalPalaceName;
-          const monthlyStars = natalPalaceName ? formatPalaceStars(extractedStars[natalPalaceName]) : '데이터 없음';
-          return `- ${monthInfo.month}월: 월별 중심 궁위 ${translateZiwei(natalPalaceName || '') || '알 수 없음'} / ${monthlyStars}`;
+          const centerPalace = translateZiwei(natalPalaceName || '') || '알 수 없음';
+
+          return buildMonthlyLiuyueEvidence({
+            month: monthInfo.month,
+            centerPalace,
+            palace: natalPalaceName ? extractedStars[natalPalaceName] : null,
+          });
         });
         monthlyLiuyueFlow = formatMonthlyLiuyueFlow(monthlyItems);
       }
@@ -514,6 +574,14 @@ ${commonRules}`
       monthlyFlow: monthlyLiuyueFlow,
     });
 
+    const charmActionRules = formatCharmActionRules(matchCharmActionRules({
+      childrenPalace: extractedStars['子女'],
+      lifePalace: extractedStars['命宮'],
+      spousePalace: extractedStars['夫妻'],
+      fortunePalace: extractedStars['福德'],
+      migrationPalace: extractedStars['遷移'],
+    }));
+
     themeSpecificContext = `
 [USER_CHART_DATA]
 ${loveMyeongbanContext}
@@ -529,6 +597,8 @@ ${formatKnowledgeBaseContext(loveKnowledgeBase)}
 ${loveTaggedKnowledgeBase ? formatTaggedKnowledgeBaseContext(loveTaggedKnowledgeBase) : '태그별 보강 근거 없음'}
 
 ${sectionEvidenceMap}
+
+${charmActionRules}
 
 ${monthlyLiuyueFlow || formatMonthlyLiuyueFlow([])}
 `;

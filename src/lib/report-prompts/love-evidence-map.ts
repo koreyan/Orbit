@@ -15,6 +15,17 @@ export interface LoveEvidenceMapInput {
   monthlyFlow: string;
 }
 
+export interface MonthlyLiuyueEvidence {
+  month: number;
+  centerPalace: string;
+  majorStars: string;
+  affectionSignals: string[];
+  cautionSignals: string[];
+  evidenceReason: string;
+  expectedSituation: string;
+  actionHint: string;
+}
+
 const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
   {
     section: "1. 나의 기본 성향과 인간관계",
@@ -38,18 +49,11 @@ const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
     writingInstruction: "첫인상, 분위기, 말투, 표정, 거리감, 반응 속도를 쓴다. 공허한 칭찬 금지.",
   },
   {
-    section: "3-2. 정서적 매력",
-    primaryPalaces: ["복덕궁", "부처궁/부부궁", "명궁", "화기/살성"],
-    directEvidenceLimit: 8,
-    requiredTags: ["charm_asset", "compatible_partner", "solo_blocker"],
-    writingInstruction: "감정 반응, 대화, 공감, 안정감, 표현 타이밍, 관계 거리감만 쓴다. 현재 매력 → 매력이 흐려지는 순간 → 기르는 방법 구조로 작성한다. 옷차림, 색감, 사진, 자세, 몸의 사용 중심 조언은 쓰지 않는다.",
-  },
-  {
-    section: "3-3. 외적 매력",
-    primaryPalaces: ["자녀궁/자식궁", "명궁", "도화성", "천이궁(보조)"],
-    directEvidenceLimit: 8,
-    requiredTags: ["charm_asset", "attraction_pattern"],
-    writingInstruction: "표정, 시선, 자세, 몸의 사용, 목소리 톤, 말 속도, 옷의 실루엣, 색감, 사진/프로필 분위기처럼 외부에서 관찰 가능한 요소만 쓴다. 천이궁은 외적 매력의 핵심 근거가 아니라 밖에서 드러나는 대외 반응과 인기의 보조 근거로만 사용한다. 배려, 정서적 지지, 깊은 대화, 자기 성찰을 반복하지 않는다. 현재 매력 → 매력이 흐려지는 순간 → 기르는 방법 구조로 작성한다.",
+    section: "3-2. 잠재된 이성적 매력",
+    primaryPalaces: ["자녀궁/자식궁", "명궁", "도화성", "부처궁/부부궁", "복덕궁", "화기/살성"],
+    directEvidenceLimit: 10,
+    requiredTags: ["charm_asset", "attraction_pattern", "compatible_partner", "solo_blocker"],
+    writingInstruction: "어떤 매력이 잠재되어 있는가, 이성이 어떤 매력을 느끼는가, 성적 끌림을 하게 하는 나의 매력 포인트, 매력이 약해지는 순간, 매력을 기르는 방법 순서로 쓴다. 매력을 기르는 방법은 [CHARM_ACTION_RULES]의 실제 자녀궁/명궁 별·길성·조합 근거를 행동으로 변환한다. 관록궁/재백궁은 이 섹션 핵심 근거로 쓰지 않는다. 천이궁은 외부 반응 보조만 사용한다.",
   },
   {
     section: "4. 인연이 들어오기 쉬운 방식",
@@ -63,7 +67,7 @@ const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
     primaryPalaces: ["유년", "유월 12개월", "대한", "천희/홍란", "도화성"],
     directEvidenceLimit: 12,
     requiredTags: ["timing_signal"],
-    writingInstruction: "유월 데이터가 있으면 올해 흐름은 반드시 1월부터 12월까지 정확히 12개 행으로 작성한다. 연도 단위로 대체하지 않고, 1~6월만 쓰고 멈추지 않는다. 강한 달, 조심할 달, 관계 진입보다 정리와 관찰이 필요한 달을 구분한다.",
+    writingInstruction: "유월 데이터가 있으면 표가 아니라 올해운 아래 1월부터 12월까지 항목형 서술로 작성한다. 각 월은 중심 궁위, 주요 별, 호감/주의 신호, 예상 상황, 행동 힌트 중 최소 1개를 생활 언어로 녹인다.",
   },
   {
     section: "6. 지금 당장 해야 할 연애 준비",
@@ -118,13 +122,20 @@ ${sectionBlocks}
 `;
 };
 
-export const formatMonthlyLiuyueFlow = (monthlyItems: string[]): string => {
+export const formatMonthlyLiuyueFlow = (monthlyItems: MonthlyLiuyueEvidence[]): string => {
   if (monthlyItems.length === 0) {
     return "[MONTHLY_LIUYUE_FLOW]\n- 유월 데이터 없음";
   }
 
   return `
 [MONTHLY_LIUYUE_FLOW]
-${monthlyItems.join("\n")}
+${monthlyItems.map((item) => `- ${item.month}월
+  - 월별 중심 궁위: ${item.centerPalace}
+  - 주요 별: ${item.majorStars}
+  - 호감/인연 신호: ${item.affectionSignals.length > 0 ? item.affectionSignals.join(", ") : "강한 신호 없음"}
+  - 주의 신호: ${item.cautionSignals.length > 0 ? item.cautionSignals.join(", ") : "강한 주의 신호 없음"}
+  - 해석 근거: ${item.evidenceReason}
+  - 예상 상황: ${item.expectedSituation}
+  - 행동 힌트: ${item.actionHint}`).join("\n")}
 `;
 };
