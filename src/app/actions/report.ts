@@ -8,7 +8,6 @@ import { getLoveSystemPrompt } from "@/lib/report-prompts/love-system-prompt";
 import { LOVE_ZIWEI_FIXED_REFERENCE } from "@/lib/report-prompts/love-ziwei-reference";
 import { formatLoveSectionEvidenceMap, formatMonthlyLiuyueFlow } from "@/lib/report-prompts/love-evidence-map";
 import type { MonthlyLiuyueEvidence } from "@/lib/report-prompts/love-evidence-map";
-import { formatCharmActionRules, matchCharmActionRules } from "@/lib/report-prompts/love-charm-action-rules";
 import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -574,14 +573,6 @@ ${commonRules}`
       monthlyFlow: monthlyLiuyueFlow,
     });
 
-    const charmActionRules = formatCharmActionRules(matchCharmActionRules({
-      childrenPalace: extractedStars['子女'],
-      lifePalace: extractedStars['命宮'],
-      spousePalace: extractedStars['夫妻'],
-      fortunePalace: extractedStars['福德'],
-      migrationPalace: extractedStars['遷移'],
-    }), saju_data?.gender || '');
-
     themeSpecificContext = `
 [USER_CHART_DATA]
 ${loveMyeongbanContext}
@@ -597,8 +588,6 @@ ${formatKnowledgeBaseContext(loveKnowledgeBase)}
 ${loveTaggedKnowledgeBase ? formatTaggedKnowledgeBaseContext(loveTaggedKnowledgeBase) : '태그별 보강 근거 없음'}
 
 ${sectionEvidenceMap}
-
-${charmActionRules}
 
 ${monthlyLiuyueFlow || formatMonthlyLiuyueFlow([])}
 `;

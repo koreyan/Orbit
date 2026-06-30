@@ -151,38 +151,23 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
-    expect(logData.systemPrompt).toContain('## 근거 우선순위 및 사용량 규칙');
-    expect(logData.systemPrompt).toContain('사용자 실제 명반 직접 근거');
-    expect(logData.systemPrompt).toContain('반드시 아래 6섹션 순서로 작성합니다.');
-    expect(logData.systemPrompt).toContain('인연 유입 방식 근거');
-    expect(logData.systemPrompt).toContain('올해/유월 흐름 근거');
-    expect(logData.systemPrompt).toContain('올해운');
-    expect(logData.systemPrompt).toContain('1월:');
-    expect(logData.systemPrompt).toContain('3-2. 잠재된 이성적 매력');
-    expect(logData.systemPrompt).toContain('어떤 매력이 잠재되어 있는가');
-    expect(logData.systemPrompt).toContain('이성이 어떤 매력을 느끼는가');
-    expect(logData.systemPrompt).toContain('성적 끌림을 하게 하는 나의 매력 포인트');
-    expect(logData.systemPrompt).toContain('매력이 약해지는 순간');
-    expect(logData.systemPrompt).toContain('매력을 기르는 방법');
-    expect(logData.systemPrompt).toContain('천이궁은 외부 반응과 인기의 보조 근거로만 사용합니다');
-    expect(logData.systemPrompt).toContain('상대 이성이 실제로 체감하는 장면');
-    expect(logData.systemPrompt).toContain('추상어는 최종 문장에 단독으로 쓰지 않습니다');
-    expect(logData.systemPrompt).toContain('시선, 거리감, 몸의 긴장감');
-    expect(logData.systemPrompt).toContain('신체 단서는 보조 근거로만 사용합니다');
-    expect(logData.systemPrompt).toContain('남성 리포트는 여성이 실제로 체감하는 매력 장면으로 번역합니다');
-    expect(logData.systemPrompt).toContain('여성 리포트는 남성이 실제로 체감하는 매력 장면으로 번역합니다');
-    expect(logData.systemPrompt).not.toContain('여성스럽다');
-    expect(logData.systemPrompt).not.toContain('예쁜 여자');
-    expect(logData.systemPrompt).not.toContain('여성적인 외모');
-    expect(logData.systemPrompt).not.toContain('3-2. 정서적 매력');
-    expect(logData.systemPrompt).not.toContain('3-3. 외적 매력');
-    expect(logData.systemPrompt).not.toContain('| 월 | 흐름 | 해야 할 것 | 피해야 할 것 |');
-    expect(logData.systemPrompt).not.toContain('질액궁');
+    expect(logData.systemPrompt).toContain('## 해석 지침 단일 출처');
+    expect(logData.systemPrompt).toContain('love-reading-interpretation-guide.md');
+    expect(logData.systemPrompt).toContain('이 시스템 프롬프트의 연애 해석 방향은 아래 해석 가이드만 따른다');
+    expect(logData.systemPrompt).toContain('명궁 주성으로 타고난 기질과 첫 반응 패턴을 읽는다');
+    expect(logData.systemPrompt).toContain('부처궁과 관록궁의 성향 차이가 클 때, 끌리는 사람과 실제로 편안한 사람이 달라지는 구조를 설명한다');
+    expect(logData.systemPrompt).toContain('자녀궁 주성으로 이성에게 비춰지는 표현·육체적 매력을 읽는다');
+    expect(logData.systemPrompt).toContain('중첩궁으로 만남의 경로를 파악한다');
+    expect(logData.systemPrompt).toContain('유년 데이터로 1~12월별 흐름을 작성한다');
+    expect(logData.systemPrompt).toContain('부처궁 화기의 작동 원리(끊임없는 갈구, 확인 욕구, 집착)에서 반복되는 실수를 줄이는 행동을 포함한다');
+    expect(logData.systemPrompt).toContain('## 3. 나의 연애 매력 자산');
+    expect(logData.systemPrompt).toContain('### 3-2. 정서적 매력 — 잠재력과 기르는 법');
+    expect(logData.systemPrompt).toContain('### 3-3. 외적 매력 — 잠재력과 기르는 법');
+    expect(logData.systemPrompt).not.toContain('data 디렉터리 근거');
+    expect(logData.systemPrompt).not.toContain('정서적 매력과 외적 매력을 통합');
+    expect(logData.systemPrompt).not.toContain('3-2. 잠재된 이성적 매력');
+    expect(logData.systemPrompt).not.toContain('천이궁은 외부 반응과 인기의 보조 근거로만 사용합니다');
     expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
-    expect(logData.systemPrompt).not.toContain('독서, 글쓰기, 짧은 문장 정리, 어휘 다듬기');
-    expect(logData.systemPrompt).not.toContain('정서적 매력 참고 후보');
-    expect(logData.systemPrompt).not.toContain('태양: 밝은 반응, 챙김, 인정 욕구, 외향적 따뜻함');
-    expect(logData.systemPrompt).not.toContain('무곡: 신뢰감, 책임감, 현실적 안정감');
     
     // 연애 전용 컨텍스트 검증: layered prompt stack
     expect(logData.userContext).toContain('[USER_CHART_DATA]');
@@ -199,26 +184,13 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('해석 근거:');
     expect(logData.userContext).toContain('예상 상황:');
     expect(logData.userContext).toContain('행동 힌트:');
-    expect(logData.userContext).toContain('[CHARM_ACTION_RULES]');
-    expect(logData.userContext).toContain('매력을 기르는 방법');
-    expect(logData.userContext).toContain('근거:');
-    expect(logData.userContext).toContain('원본 근거 요약:');
-    expect(logData.userContext).toContain('신체 단서(보조):');
-    expect(logData.userContext).toContain('분위기/반응 단서:');
-    expect(logData.userContext).toContain('상대 이성이 체감하는 장면:');
-    expect(logData.userContext).toContain('대상 이성: 여성');
-    expect(logData.userContext).toContain('여성에게 어필되는 장면:');
-    expect(logData.userContext).toContain('여성이 감정적으로 몰아붙여지지 않는다고 느끼는 거리감');
-    expect(logData.userContext).not.toContain('여성스럽고 예쁜 외모');
-    expect(logData.userContext).not.toContain('매끄러운 몸의 곡선');
-    expect(logData.userContext).not.toContain('몸의 곡선이 부드럽게 남는 인상');
-    expect(logData.userContext).not.toContain('강한 자기장을 가진 사람');
-    expect(logData.userContext).not.toContain('우아한 분위기가 있습니다');
-    expect(logData.userContext).not.toContain('아우라가 있습니다');
     expect(logData.userContext).toContain('행동 힌트:');
-    expect(logData.userContext).toContain('이성 비율이 높은 환경');
     expect(logData.userContext).toContain('태그별 보강 근거');
-    expect(logData.userContext).toContain('[3-2. 잠재된 이성적 매력]');
+    expect(logData.userContext).toContain('[3-2. 정서적 매력 — 잠재력과 기르는 법]');
+    expect(logData.userContext).toContain('[3-3. 외적 매력 — 잠재력과 기르는 법]');
+    expect(logData.userContext).not.toContain('[CHARM_ACTION_RULES]');
+    expect(logData.userContext).not.toContain('상대 이성이 체감하는 장면:');
+    expect(logData.userContext).not.toContain('여성에게 어필되는 장면:');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {
