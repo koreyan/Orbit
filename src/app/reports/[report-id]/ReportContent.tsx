@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2, RefreshCcw } from "lucide-react";
-import { makeReportPublic } from "@/app/actions/report";
-import ReactMarkdown from "react-markdown";
+import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2, RefreshCcw, BookOpenText, Quote, Layers3 } from "lucide-react";
+import { makeReportPublic, generateReportAction } from "@/app/actions/report";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 type Theme = "career" | "love" | "hobby" | string;
@@ -18,6 +18,11 @@ interface ReportData {
   periodic_insight?: string;
 }
 
+interface MarkdownSection {
+  title: string;
+  body: string;
+}
+
 interface ReportContentProps {
   reportId: string;
   theme: Theme;
@@ -25,7 +30,83 @@ interface ReportContentProps {
   content: ReportData | null;
 }
 
-import { generateReportAction } from "@/app/actions/report";
+interface ThemeVisual {
+  eyebrow: string;
+  title: string;
+  description: string;
+  gradient: string;
+  icon: typeof Star;
+}
+
+const THEME_VISUALS: Record<string, ThemeVisual> = {
+  career: {
+    eyebrow: "Career Reading",
+    title: "나의 커리어 별빛 이야기",
+    description: "일하는 방식, 강점, 성장 방향을 한 장의 리포트처럼 정리했습니다.",
+    gradient: "from-orange-400/25 via-amber-300/10 to-transparent",
+    icon: Target,
+  },
+  love: {
+    eyebrow: "Love Reading",
+    title: "나의 관계와 매력 이야기",
+    description: "관계에서 드러나는 반응, 끌림, 가까워질수록 살아나는 매력을 읽습니다.",
+    gradient: "from-rose-400/25 via-orange-300/10 to-transparent",
+    icon: Heart,
+  },
+  hobby: {
+    eyebrow: "Wellness Reading",
+    title: "나의 회복과 라이프 이야기",
+    description: "나에게 맞는 에너지 관리와 여가 리듬을 감각적으로 정리했습니다.",
+    gradient: "from-indigo-400/25 via-cyan-300/10 to-transparent",
+    icon: Compass,
+  },
+};
+
+const markdownComponents: Components = {
+  h1: ({ children }) => (
+    <h1 className="mb-8 mt-2 text-3xl font-black leading-tight tracking-tight text-white md:text-4xl">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-5 mt-12 flex items-center gap-3 rounded-2xl border border-orange-300/15 bg-orange-400/10 px-5 py-4 text-2xl font-black text-orange-100 shadow-[0_0_30px_rgba(255,107,53,0.08)] first:mt-0">
+      <Sparkles className="h-5 w-5 shrink-0 text-orange-300" />
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-3 mt-8 border-l-2 border-orange-300/50 pl-4 text-xl font-bold text-white">
+      {children}
+    </h3>
+  ),
+  p: ({ children }) => (
+    <p className="my-4 text-[1.02rem] leading-8 text-white/78 md:text-lg md:leading-9">
+      {children}
+    </p>
+  ),
+  ul: ({ children }) => (
+    <ul className="my-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-5 text-white/75">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="my-5 list-decimal space-y-3 rounded-2xl border border-white/10 bg-black/20 p-5 pl-9 text-white/75">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li className="pl-1 leading-7 marker:text-orange-300">
+      {children}
+    </li>
+  ),
+  strong: ({ children }) => <strong className="font-black text-orange-100">{children}</strong>,
+  blockquote: ({ children }) => (
+    <blockquote className="my-6 rounded-2xl border border-orange-300/20 bg-orange-400/10 p-5 text-white/80">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-10 border-white/10" />,
+};
 
 export default function ReportContent({ reportId, theme, status, content }: ReportContentProps) {
   const router = useRouter();
@@ -237,78 +318,150 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
     theme === "love" ? Heart : 
     theme === "hobby" ? Compass : Star;
 
-  return (
-    <div className="w-full max-w-3xl mx-auto pb-20 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-      
-      {/* Hero Section */}
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center justify-center p-3 bg-primary/20 rounded-full mb-6 relative">
-          <Sparkles className="w-8 h-8 text-primary relative z-10" />
-          <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full"></div>
-        </div>
-        {!content.markdown && (
-          <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-primary mb-4 leading-relaxed">
-            &quot;{content.teaser_quote}&quot;
-          </h2>
-        )}
-      </div>
+  const currentThemeVisual = THEME_VISUALS[theme] ?? {
+    eyebrow: "Orbit Reading",
+    title: "나의 별빛 이야기",
+    description: "개인 명반을 바탕으로 정리한 맞춤형 리포트입니다.",
+    gradient: "from-orange-400/25 via-white/5 to-transparent",
+    icon: Star,
+  };
+  const ThemeVisualIcon = currentThemeVisual.icon;
+  const markdownSections = content.markdown ? splitMarkdownSections(cleanMarkdown(content.markdown)) : [];
 
-      {/* Main Content Sections */}
-      {content.markdown ? (
-        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-primary/5 to-transparent pointer-events-none"></div>
-          <div className="relative z-10 prose prose-invert prose-orange max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {cleanMarkdown(content.markdown)}
-            </ReactMarkdown>
+  return (
+    <div className="mx-auto w-full max-w-5xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
+      <section className="mb-8 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-2xl backdrop-blur-xl">
+        <div className={`relative bg-gradient-to-br ${currentThemeVisual.gradient} p-6 md:p-8`}>
+          <div className="absolute right-6 top-6 hidden rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/45 md:block">
+            {currentThemeVisual.eyebrow}
           </div>
+          <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/10 px-4 py-2 text-sm font-bold text-orange-100">
+                <Sparkles className="h-4 w-4 text-orange-300" />
+                해독 완료
+              </div>
+              <h1 className="text-3xl font-black leading-tight tracking-tight text-white md:text-5xl">
+                {currentThemeVisual.title}
+              </h1>
+              <p className="mt-4 text-base leading-7 text-white/62 md:text-lg">
+                {currentThemeVisual.description}
+              </p>
+            </div>
+            <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-white/10 bg-white/10 shadow-inner">
+              <ThemeVisualIcon className="h-10 w-10 text-orange-100" />
+            </div>
+          </div>
+        </div>
+
+        {!content.markdown && content.teaser_quote && (
+          <div className="border-t border-white/10 p-6 md:p-8">
+            <div className="flex gap-4 rounded-3xl border border-white/10 bg-black/20 p-5">
+              <Quote className="mt-1 h-6 w-6 shrink-0 text-orange-300" />
+              <p className="text-xl font-black leading-relaxed text-white md:text-2xl">
+                {content.teaser_quote}
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {content.markdown ? (
+        <div className="space-y-5 md:space-y-6">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-white/45">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+              <BookOpenText className="h-4 w-4 text-orange-200" />
+              섹션형 리포트
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+              <Layers3 className="h-4 w-4 text-orange-200" />
+              항목별 카드 구성
+            </span>
+          </div>
+
+          {markdownSections.map((section, index) => {
+            const sectionNumber = String(index + 1).padStart(2, "0");
+            const isLeadSection = index === 0;
+
+            return (
+              <section
+                key={`${section.title}-${index}`}
+                className={`relative overflow-hidden rounded-[2rem] border shadow-2xl backdrop-blur-xl ${
+                  isLeadSection
+                    ? "border-orange-300/20 bg-gradient-to-br from-orange-400/12 via-white/[0.04] to-white/[0.02]"
+                    : "border-white/10 bg-white/[0.035]"
+                }`}
+              >
+                <div className="absolute left-0 top-0 h-full w-px bg-gradient-to-b from-orange-300/70 via-white/10 to-transparent" />
+                <div className="absolute right-[-120px] top-[-80px] h-72 w-72 rounded-full bg-orange-500/10 blur-[90px]" />
+                <div className="relative z-10 p-5 md:p-8">
+                  <div className="mb-6 flex items-start gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/12 text-sm font-black text-orange-100">
+                      {sectionNumber}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-orange-200/60">
+                        Orbit Report Section
+                      </p>
+                      <h2 className="text-2xl font-black leading-snug text-white md:text-3xl">
+                        {section.title}
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 md:p-6">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {section.body}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </section>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-6 md:space-y-8">
-          {/* Core Trait */}
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-primary/5 to-transparent pointer-events-none"></div>
+          <div className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl backdrop-blur-xl md:p-8">
+            <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-orange-400/10 to-transparent" />
             <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                  <Star className="w-5 h-5 text-white/80" />
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+                  <Star className="h-5 w-5 text-orange-100" />
                 </div>
-                <h3 className="text-xl font-bold text-white">나의 진짜 모습</h3>
+                <h3 className="text-xl font-black text-white">나의 진짜 모습</h3>
               </div>
-              <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
+              <p className="whitespace-pre-line text-lg leading-9 text-white/80">
                 {content.core_trait}
               </p>
             </div>
           </div>
 
-          {/* Theme Specific Insight */}
-          <div className="bg-gradient-to-br from-primary/10 to-transparent backdrop-blur-xl border border-primary/20 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(255,107,53,0.1)] relative overflow-hidden">
-            <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
-              <InsightIcon className="w-48 h-48 text-primary" />
+          <div className="relative overflow-hidden rounded-[2rem] border border-orange-300/20 bg-gradient-to-br from-orange-400/10 to-transparent p-6 shadow-[0_0_40px_rgba(255,107,53,0.1)] backdrop-blur-xl md:p-8">
+            <div className="pointer-events-none absolute -bottom-10 -right-10 opacity-10">
+              <InsightIcon className="h-48 w-48 text-orange-200" />
             </div>
             <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <InsightIcon className="w-5 h-5 text-primary" />
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-400/15">
+                  <InsightIcon className="h-5 w-5 text-orange-200" />
                 </div>
-                <h3 className="text-xl font-bold text-primary">{specificInsightTitle}</h3>
+                <h3 className="text-xl font-black text-orange-100">{specificInsightTitle}</h3>
               </div>
-              <p className="text-white/90 leading-relaxed md:text-lg whitespace-pre-line">
+              <p className="whitespace-pre-line text-lg leading-9 text-white/88">
                 {content.theme_insight}
               </p>
             </div>
           </div>
 
-          {/* Periodic Insight */}
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl backdrop-blur-xl md:p-8">
             <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-white/80" />
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+                  <Clock className="h-5 w-5 text-orange-100" />
                 </div>
-                <h3 className="text-xl font-bold text-white">다가오는 시기의 운세 흐름</h3>
+                <h3 className="text-xl font-black text-white">다가오는 시기의 운세 흐름</h3>
               </div>
-              <p className="text-white/80 leading-relaxed md:text-lg whitespace-pre-line">
+              <p className="whitespace-pre-line text-lg leading-9 text-white/80">
                 {content.periodic_insight}
               </p>
             </div>
@@ -316,36 +469,36 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
         </div>
       )}
 
-      {/* Share Section */}
-      <div className="mt-16 pt-8 border-t border-white/10 text-center">
-        <h4 className="text-lg font-medium text-white/80 mb-6">내 별빛 이야기를 공유해보세요</h4>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button 
+      <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 text-center shadow-2xl backdrop-blur-xl md:p-8">
+        <h4 className="text-lg font-bold text-white/85">내 별빛 이야기를 공유해보세요</h4>
+        <p className="mt-2 text-sm text-white/45">공유 링크를 만들면 로그인 없이도 이 리포트를 열람할 수 있습니다.</p>
+        <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <Button
             onClick={handleCopyLink}
-            variant="outline" 
-            className="w-full sm:w-auto h-14 px-8 rounded-xl border-white/20 text-white bg-white/5 hover:bg-white/10 transition-all text-base"
+            variant="outline"
+            className="h-14 w-full rounded-xl border-white/20 bg-white/5 px-8 text-base text-white transition-all hover:bg-white/10 sm:w-auto"
           >
             {copied ? (
               <>
-                <Check className="mr-2 w-5 h-5 text-green-400" />
+                <Check className="mr-2 h-5 w-5 text-green-400" />
                 링크 복사 완료
               </>
             ) : (
               <>
-                <LinkIcon className="mr-2 w-5 h-5 text-white/60" />
+                <LinkIcon className="mr-2 h-5 w-5 text-white/60" />
                 링크 복사하기
               </>
             )}
           </Button>
-          <Button 
+          <Button
             onClick={handleShare}
-            className="w-full sm:w-auto h-14 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 transition-all text-base font-bold shadow-[0_0_15px_rgba(255,107,53,0.3)]"
+            className="h-14 w-full rounded-xl bg-orange-500 px-8 text-base font-black text-white shadow-[0_0_20px_rgba(255,107,53,0.3)] transition-all hover:bg-orange-400 sm:w-auto"
           >
-            <Share2 className="mr-2 w-5 h-5" />
+            <Share2 className="mr-2 h-5 w-5" />
             외부로 공유하기
           </Button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
@@ -362,4 +515,36 @@ function cleanMarkdown(text?: string): string {
     cleaned = cleaned.substring(0, cleaned.length - "```".length).trim();
   }
   return cleaned;
+}
+
+function splitMarkdownSections(markdown: string): MarkdownSection[] {
+  const normalized = markdown.trim();
+  if (!normalized) return [];
+
+  const headingMatches = Array.from(normalized.matchAll(/^#{1,2}\s+(.+)$/gm));
+  if (headingMatches.length === 0) {
+    return [{ title: "나의 별빛 이야기", body: normalized }];
+  }
+
+  const intro = normalized.slice(0, headingMatches[0].index ?? 0).trim();
+  const sections: MarkdownSection[] = [];
+
+  if (intro) {
+    sections.push({ title: "요약", body: intro });
+  }
+
+  headingMatches.forEach((match, index) => {
+    const headingStart = match.index ?? 0;
+    const bodyStart = headingStart + match[0].length;
+    const nextHeadingStart = headingMatches[index + 1]?.index ?? normalized.length;
+    const title = match[1].replace(/^[0-9]+[.)]\s*/, "").trim();
+    const body = normalized.slice(bodyStart, nextHeadingStart).trim();
+
+    sections.push({
+      title: title || `항목 ${index + 1}`,
+      body: body || "내용을 준비 중입니다.",
+    });
+  });
+
+  return sections;
 }

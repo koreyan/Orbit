@@ -1,18 +1,16 @@
-import type { LoveSectionEvidence } from "./types";
-
-export interface LoveEvidenceMapInput {
+export interface LoveGuidePacketInput {
   gender: string;
   lifePalace: string;
   shenGong: string;
   spousePalace: string;
-  careerPalace: string;
-  wealthPalace: string;
   fortunePalace: string;
   childrenPalace: string;
   migrationPalace: string;
   networkPalace: string;
+  parentsPalace: string;
   loveTags: string;
   monthlyFlow: string;
+  taggedEvidence: string;
 }
 
 export interface MonthlyLiuyueEvidence {
@@ -26,115 +24,74 @@ export interface MonthlyLiuyueEvidence {
   actionHint: string;
 }
 
-const LOVE_SECTION_EVIDENCE: LoveSectionEvidence[] = [
-  {
-    section: "1. 나의 기본 성향과 인간관계",
-    primaryPalaces: ["명궁", "복덕궁", "천이궁", "부처궁/부부궁", "관록궁", "부처궁 삼방사정"],
-    directEvidenceLimit: 8,
-    requiredTags: ["solo_blocker", "action_guide"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 명궁은 타고난 기질과 첫 반응, 복덕궁은 혼자 있을 때의 감정 습관과 정서적 만족 기준, 천이궁은 외부 환경의 태도와 대인관계 이미지, 부처궁은 감정 태도와 연애관, 부처궁-관록궁 차이는 내면 욕구와 상대 조건의 혼란으로 읽는다.",
-  },
-  {
-    section: "2. 내가 끌리는 사람 vs 실제로 잘 맞는 사람",
-    primaryPalaces: ["부처궁/부부궁", "관록궁", "천이궁", "도화성", "복덕궁", "살성"],
-    directEvidenceLimit: 8,
-    requiredTags: ["attraction_pattern", "compatible_partner", "conflict_pattern"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 부처궁은 내면적 감정 욕구와 끌리는 유형, 관록궁은 상대에게 요구하는 조건과 사회적 기준으로 읽고, 두 궁의 성향 차이가 클 때 끌리는 사람과 실제 편안한 사람이 달라지는 구조를 설명한다. 도화의 길흉은 살성 유무와 복덕궁 강약으로 판단한다.",
-  },
-  {
-    section: "3-1. 분위기와 첫인상 매력",
-    primaryPalaces: ["명궁", "명궁 궁위", "도화성", "천이궁"],
-    directEvidenceLimit: 8,
-    requiredTags: ["charm_asset", "attraction_pattern"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 명궁 주성과 궁위로 첫인상과 분위기를 읽고, 도화성이 명궁에 있으면 외모나 성격이 호감을 살 가능성으로 읽으며, 천이궁 주성으로 밖에서 드러나는 대외 반응과 이미지를 읽는다.",
-  },
-  {
-    section: "3-2. 정서적 매력 — 잠재력과 기르는 법",
-    primaryPalaces: ["복덕궁", "부처궁/부부궁", "성별", "염정", "천량", "탐랑", "파군", "문곡", "홍란"],
-    directEvidenceLimit: 8,
-    requiredTags: ["charm_asset", "attraction_pattern", "compatible_partner", "solo_blocker"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 이 섹션은 조언보다 매력 묘사가 우선이다. 복덕궁 주성으로 현재 정서적 매력 잠재력을 먼저 설명하고, 부처궁 주성으로 감정 작동 방식이 상대 이성에게 어떻게 매력으로 느껴지는지 쓴다. 남성 리포트면 여성이 느끼는 매력 중심, 여성 리포트면 남성이 느끼는 매력 중심으로 쓴다. 마지막에만 매력이 약해지는 순간과 기르는 법을 붙인다.",
-  },
-  {
-    section: "3-3. 외적 매력 — 잠재력과 기르는 법",
-    primaryPalaces: ["자녀궁/자식궁", "성별", "주요 매력·도화 별"],
-    directEvidenceLimit: 8,
-    requiredTags: ["charm_asset", "attraction_pattern"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 이 섹션은 조언보다 외적·표현 매력 묘사가 우선이다. 자녀궁 주성으로 이성에게 비춰지는 표현·육체적 매력, 시각적 인상, 성적 끌림으로 연결되는 분위기를 먼저 설명한다. 표정, 시선, 자세, 몸의 사용, 목소리 톤, 말 속도, 옷의 실루엣, 색감, 사진/프로필 분위기처럼 외부에서 관찰 가능한 요소로 쓴다. 남성 리포트면 여성 시선, 여성 리포트면 남성 시선에서 느껴지는 매력으로 쓰고, 마지막에만 기르는 법을 붙인다.",
-  },
-  {
-    section: "3-4. 이성과 만날 때 매력 활용 스토리",
-    primaryPalaces: ["3-1 결과", "3-2 결과", "3-3 결과", "중첩궁", "명궁", "자녀궁", "복덕궁"],
-    directEvidenceLimit: 8,
-    requiredTags: ["encounter_path", "charm_asset", "action_guide"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 모임 참여를 권유하는 조언이 아니라 3-1, 3-2, 3-3에서 도출된 매력이 실제 만남에서 상대에게 어떻게 체감되는지 장면으로 구성한다. 중첩궁이 관록궁이면 직장·업무, 노복궁이면 소개팅·친구 모임·지인 연결, 천이궁이면 동호회·클래스·외부 정기 모임, 부모궁·형제궁이면 가족 지인·선배·연장자 주선 자리로 설정한다.",
-  },
-  {
-    section: "4. 인연이 들어오기 쉬운 방식",
-    primaryPalaces: ["중첩궁", "소한 명궁 아래 중첩궁"],
-    directEvidenceLimit: 8,
-    requiredTags: ["encounter_path", "action_guide"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 중첩궁으로 만남의 경로를 파악한다. 관록궁이면 직장·업무, 노복궁이면 친구 소개, 천이궁이면 외출·여행, 부모궁·형제궁이면 연장자 소개로 쓰고, 소한 명궁 아래 중첩궁으로 인연이 들어오는 공간을 특정한다.",
-  },
-  {
-    section: "5. 올해 인연 기회",
-    primaryPalaces: ["유년 명궁", "유년 부처궁", "사화성", "탐랑+화록", "살성", "홍란·천희", "유년 1~12월"],
-    directEvidenceLimit: 12,
-    requiredTags: ["timing_signal"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 유년 명궁으로 올해 주제를 보고, 유년 부처궁의 별 조합을 확인한다. 화록은 인연 기회, 화기는 감정적 장애로 읽는다. 유년 데이터로 1~12월별 흐름을 작성한다.",
-  },
-  {
-    section: "6. 지금 당장 해야 할 연애 준비",
-    primaryPalaces: ["3번 매력 섹션 결과", "부처궁 화기", "부처궁 살성"],
-    directEvidenceLimit: 8,
-    requiredTags: ["action_guide", "solo_blocker"],
-    writingInstruction: "love-reading-interpretation-guide.md 기준만 사용한다. 3번 매력 섹션에서 도출된 잠재 매력과 기르는 법을 기반으로 실행 행동을 작성한다. 부처궁 화기의 끊임없는 갈구, 확인 욕구, 집착에서 반복 실수를 줄이는 행동을 포함하고, 부처궁 살성의 감정 리듬별 교정 행동을 포함한다.",
-  },
-];
-
-const describeGenderEnvironment = (gender: string): string => {
+const describeGenderPerspective = (gender: string): string => {
   if (gender === "M") {
-    return "남성 리포트: 여성 비율이 높은 환경에서, 사용자의 명궁/관록궁/재백궁/천이궁 강점으로 맡을 수 있는 역할을 제안한다.";
+    return "남성 리포트: 여성이 체감하는 매력과 관계 반응으로 번역한다.";
   }
 
   if (gender === "F") {
-    return "여성 리포트: 남성 비율이 높은 환경에서, 사용자의 명궁/관록궁/재백궁/천이궁 강점으로 맡을 수 있는 역할을 제안한다.";
+    return "여성 리포트: 남성이 체감하는 매력과 관계 반응으로 번역한다.";
   }
 
-  return "성별 데이터가 불명확하면 이성 비율이 높은 환경이라는 표현은 유지하되, 특정 성별 비율 단정은 피한다.";
+  return "성별 데이터가 불명확하면 상대 이성이 체감하는 매력과 관계 반응으로 번역한다.";
 };
 
-export const formatLoveSectionEvidenceMap = (input: LoveEvidenceMapInput): string => {
-  const sectionBlocks = LOVE_SECTION_EVIDENCE.map((section) => `
-[${section.section}]
-- 주요 궁/데이터: ${section.primaryPalaces.join(", ")}
-- 직접 명반 근거 상한: ${section.directEvidenceLimit}개
-- 태그별 보강 근거: ${section.requiredTags.join(", ")}
-- 작성 지시: ${section.writingInstruction}
-`).join("\n");
+export const formatLoveGuidePackets = (input: LoveGuidePacketInput): string => `
+[GUIDE_TRANSLATION_PACKET]
+- 목적: docs/love-reading-interpretation-guide.md의 섹션 구조를 그대로 번역한 중간 패킷이다.
+- 사용 규칙: 아래 패킷은 조언 생성용이 아니라 자기이해형 해석 근거다.
+- 금지: 가이드에 없는 섹션을 새로 만들지 않는다. 3번 섹션이 아니라 1, 2-1~2-4, 4만 사용한다.
 
-  return `
-[SECTION_EVIDENCE_MAP]
-- 근거 우선순위: 실제 명반 직접 근거 > 예외 처리 필수 근거 > 섹션별 태그 보강 근거 > 일반 총론
-- ${describeGenderEnvironment(input.gender)}
-
-[직접 명반 요약]
+[1. 나의 기본 성향과 인간관계]
+- 핵심 근거: 명궁 + 복덕궁 + 천이궁 + 부처궁
 - 명궁: ${input.lifePalace}
-- 신궁: ${input.shenGong}
-- 부처궁/부부궁: ${input.spousePalace}
-- 관록궁: ${input.careerPalace}
-- 재백궁: ${input.wealthPalace}
 - 복덕궁: ${input.fortunePalace}
+- 천이궁: ${input.migrationPalace}
+- 부처궁/부부궁: ${input.spousePalace}
+- 번역 방향: 타고난 첫 반응, 혼자 있을 때의 감정 습관, 밖에서 보이는 인상, 관계에서 원하는 방식을 생활 언어로 설명한다.
+
+[2-1. 분위기와 첫인상 매력]
+- 핵심 근거: 명궁 + 천이궁
+- 명궁: ${input.lifePalace}
+- 천이궁: ${input.migrationPalace}
+- 연애 태그: ${input.loveTags}
+- 번역 방향: 처음 만났을 때 보이는 표정, 시선, 말의 첫 온도, 거리감 같은 첫인상 매력을 묘사한다.
+
+[2-2. 정서적 매력 — 잠재력과 기르는 법]
+- 핵심 근거: 복덕궁 + 부처궁
+- 복덕궁: ${input.fortunePalace}
+- 부처궁/부부궁: ${input.spousePalace}
+- 성별 시선: ${describeGenderPerspective(input.gender)}
+- 번역 방향: 가까워질수록 드러나는 정서적 안정감, 감정 반응 방식, 상대가 느끼는 편안함과 거리감을 설명한다.
+
+[2-3. 외적 매력 — 잠재력과 기르는 법]
+- 핵심 근거: 자녀궁 + 명궁
 - 자녀궁/자식궁: ${input.childrenPalace}
+- 명궁: ${input.lifePalace}
+- 성별 시선: ${describeGenderPerspective(input.gender)}
+- 번역 방향: 이성에게 비춰지는 표현, 몸의 사용, 분위기, 성적 에너지의 방향을 구체적으로 묘사한다.
+
+[2-4. 이성과 만날 때 매력 활용 스토리]
+- 핵심 근거: 2-1~2-3 + 인연 유입 경로
+- 인연 유입 근거: ${input.migrationPalace} / ${input.networkPalace} / ${input.parentsPalace} / ${input.shenGong}
+- 번역 방향: 어떤 만남 자리에서 어떤 매력이 더 잘 보이는지, 실제 장면 하나로 이어서 서술한다.
+
+[4. 인연이 들어오기 쉬운 방식]
+- 핵심 근거: 천이궁 + 노복궁/형제궁 + 부모궁 + 신궁 + 유년 흐름
 - 천이궁: ${input.migrationPalace}
 - 노복궁/형제궁: ${input.networkPalace}
+- 부모궁: ${input.parentsPalace}
+- 신궁: ${input.shenGong}
+- 번역 방향: 막연한 행동 처방이 아니라, 어떤 공간/관계 맥락/만남 방식에서 인연이 들어오고 관계가 편해지는지 설명한다.
 
-[연애 태그 요약]
-${input.loveTags}
+[MONTHLY_LIUYUE_FLOW]
+- 작성 범위: 올해 관계 흐름은 예언이 아니라 감정이 활성화되는 흐름으로만 설명한다.
+${input.monthlyFlow || "- 유월 데이터 없음"}
 
-${sectionBlocks}
+[섹션 보강 근거]
+- 태그별 보강 근거는 섹션 1~4의 설명을 보강하는 원자료로만 사용한다.
+${input.taggedEvidence || "태그별 보강 근거 없음"}
 `;
-};
 
 export const formatMonthlyLiuyueFlow = (monthlyItems: MonthlyLiuyueEvidence[]): string => {
   if (monthlyItems.length === 0) {
@@ -150,6 +107,6 @@ ${monthlyItems.map((item) => `- ${item.month}월
   - 주의 신호: ${item.cautionSignals.length > 0 ? item.cautionSignals.join(", ") : "강한 주의 신호 없음"}
   - 해석 근거: ${item.evidenceReason}
   - 예상 상황: ${item.expectedSituation}
-  - 행동 힌트: ${item.actionHint}`).join("\n")}
+  - 흐름 단서: ${item.actionHint}`).join("\n")}
 `;
 };

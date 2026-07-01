@@ -123,6 +123,18 @@ export function formatKnowledgeBaseContext(entries: KnowledgeBaseContextEntry[])
 `).join('\n');
 }
 
+export function formatLoveSelfUnderstandingKnowledgeContext(entries: KnowledgeBaseContextEntry[]): string {
+  if (entries.length === 0) return '';
+
+  return entries.map((entry) => `
+[지식베이스 - ${entry.category} | 매칭어: ${entry.matched_term}]
+- 제목: ${entry.target_subject}
+- 본질적 성향: ${entry.core_trait}
+- 연애/관계성: ${entry.love_insight}
+- 관계 흐름: ${entry.periodic_insight}
+`).join('\n');
+}
+
 interface LoveTagMappingRow {
   tag: string;
   z_knowledge_base: KnowledgeBaseEntry | KnowledgeBaseEntry[] | null;
@@ -209,6 +221,24 @@ export function formatTaggedKnowledgeBaseContext(
 ${index + 1}. ${entry.target_subject}
    - 연애/관계성: ${entry.love_insight}
    - 시기별 조언: ${entry.periodic_insight}
+`).join('');
+
+    return `[태그별 보강 근거 - ${tag}]${formattedEntries}`;
+  });
+
+  return blocks.join('\n');
+}
+
+export function formatTaggedLoveSelfUnderstandingContext(
+  entriesByTag: Record<LoveEvidenceTag, KnowledgeBaseContextEntry[]>
+): string {
+  const blocks = Object.entries(entriesByTag).map(([tag, entries]) => {
+    if (entries.length === 0) return `[태그별 보강 근거 - ${tag}]\n- 매칭 근거 없음`;
+
+    const formattedEntries = entries.map((entry, index) => `
+${index + 1}. ${entry.target_subject}
+   - 연애/관계성: ${entry.love_insight}
+   - 관계 흐름: ${entry.periodic_insight}
 `).join('');
 
     return `[태그별 보강 근거 - ${tag}]${formattedEntries}`;
