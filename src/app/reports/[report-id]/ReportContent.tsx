@@ -521,12 +521,17 @@ function splitMarkdownSections(markdown: string): MarkdownSection[] {
   const normalized = markdown.trim();
   if (!normalized) return [];
 
-  const headingMatches = Array.from(normalized.matchAll(/^#{1,2}\s+(.+)$/gm));
+  const h2Matches = Array.from(normalized.matchAll(/^##\s+(.+)$/gm));
+  const headingMatches = h2Matches.length > 0 ? h2Matches : Array.from(normalized.matchAll(/^#\s+(.+)$/gm));
+
   if (headingMatches.length === 0) {
     return [{ title: "나의 별빛 이야기", body: normalized }];
   }
 
-  const intro = normalized.slice(0, headingMatches[0].index ?? 0).trim();
+  const intro = normalized
+    .slice(0, headingMatches[0].index ?? 0)
+    .replace(/^#\s+.+$/gm, "")
+    .trim();
   const sections: MarkdownSection[] = [];
 
   if (intro) {
@@ -540,11 +545,13 @@ function splitMarkdownSections(markdown: string): MarkdownSection[] {
     const title = match[1].replace(/^[0-9]+[.)]\s*/, "").trim();
     const body = normalized.slice(bodyStart, nextHeadingStart).trim();
 
+    if (!body) return;
+
     sections.push({
-      title: title || `항목 ${index + 1}`,
-      body: body || "내용을 준비 중입니다.",
+      title: title || `항목 ${sections.length + 1}`,
+      body,
     });
   });
 
-  return sections;
+  return sections.length > 0 ? sections : [{ title: "나의 별빛 이야기", body: normalized }];
 }
