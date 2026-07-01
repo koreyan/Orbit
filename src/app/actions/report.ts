@@ -7,6 +7,10 @@ import { fetchKnowledgeBaseByLoveTags, fetchKnowledgeBaseForLove, fetchKnowledge
 import { getLoveSystemPrompt } from "@/lib/report-prompts/love-system-prompt";
 import { LOVE_ZIWEI_FIXED_REFERENCE } from "@/lib/report-prompts/love-ziwei-reference";
 import { formatLoveSectionEvidenceMap, formatMonthlyLiuyueFlow } from "@/lib/report-prompts/love-evidence-map";
+import { extractLoveTraits, formatLoveTraitFindings } from "@/lib/love-analysis/extract-love-traits";
+import { extractRiskPatterns, formatLoveRiskPatterns } from "@/lib/love-analysis/extract-risk-patterns";
+import { selectLoveAdviceRules } from "@/lib/love-advice/select-love-advice-rules";
+import { formatLoveAdviceContext } from "@/lib/love-advice/format-love-advice-context";
 import type { MonthlyLiuyueEvidence } from "@/lib/report-prompts/love-evidence-map";
 import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
@@ -573,6 +577,25 @@ ${commonRules}`
       monthlyFlow: monthlyLiuyueFlow,
     });
 
+    const loveTraitFindings = extractLoveTraits({
+      gender: saju_data?.gender || '',
+      lifePalace: extractedStars['命宮'],
+      spousePalace: extractedStars['夫妻'],
+      careerPalace: extractedStars['官祿'],
+      fortunePalace: extractedStars['福德'],
+      childrenPalace: extractedStars['子女'],
+      migrationPalace: extractedStars['遷移'],
+      loveTagData,
+    });
+    const loveRiskPatterns = extractRiskPatterns(loveTraitFindings);
+    const selectedLoveAdviceRules = selectLoveAdviceRules({
+      riskPatterns: loveRiskPatterns,
+      maxRules: 6,
+    });
+    const loveTraitContext = formatLoveTraitFindings(loveTraitFindings);
+    const loveRiskContext = formatLoveRiskPatterns(loveRiskPatterns);
+    const loveAdviceContext = formatLoveAdviceContext(selectedLoveAdviceRules);
+
     themeSpecificContext = `
 [USER_CHART_DATA]
 ${loveMyeongbanContext}
@@ -588,6 +611,12 @@ ${formatKnowledgeBaseContext(loveKnowledgeBase)}
 ${loveTaggedKnowledgeBase ? formatTaggedKnowledgeBaseContext(loveTaggedKnowledgeBase) : '태그별 보강 근거 없음'}
 
 ${sectionEvidenceMap}
+
+${loveTraitContext}
+
+${loveRiskContext}
+
+${loveAdviceContext}
 
 ${monthlyLiuyueFlow || formatMonthlyLiuyueFlow([])}
 `;
