@@ -521,8 +521,12 @@ function splitMarkdownSections(markdown: string): MarkdownSection[] {
   const normalized = markdown.trim();
   if (!normalized) return [];
 
-  const h2Matches = Array.from(normalized.matchAll(/^##\s+(.+)$/gm));
-  const headingMatches = h2Matches.length > 0 ? h2Matches : Array.from(normalized.matchAll(/^#\s+(.+)$/gm));
+  const numberedMatches = Array.from(normalized.matchAll(/^\d+\.\s+(.+)$/gm));
+  const headingMatches = numberedMatches.length > 0
+    ? numberedMatches
+    : Array.from(normalized.matchAll(/^##\s+(.+)$/gm)).length > 0
+      ? Array.from(normalized.matchAll(/^##\s+(.+)$/gm))
+      : Array.from(normalized.matchAll(/^#\s+(.+)$/gm));
 
   if (headingMatches.length === 0) {
     return [{ title: "나의 별빛 이야기", body: normalized }];
