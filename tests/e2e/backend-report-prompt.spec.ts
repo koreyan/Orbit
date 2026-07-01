@@ -162,6 +162,10 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).toContain('부처궁 화기의 작동 원리(끊임없는 갈구, 확인 욕구, 집착)에서 반복되는 실수를 줄이는 행동을 포함한다');
     expect(logData.systemPrompt).toContain('연애 조언 생성 파이프라인');
     expect(logData.systemPrompt).toContain('최종 출력 용어 변환 규칙');
+    expect(logData.systemPrompt).toContain('매력 섹션 출력 강제 규칙');
+    expect(logData.systemPrompt).toContain('사용자의 매력을 먼저 설명하는 섹션');
+    expect(logData.systemPrompt).toContain('조언 문장은 마지막 30% 이내');
+    expect(logData.systemPrompt).toContain('표정, 시선, 자세, 몸의 사용');
     expect(logData.systemPrompt).toContain('별 이름을 쓰지 않는다');
     expect(logData.systemPrompt).toContain('생활 언어로 치환한다');
     expect(logData.systemPrompt).toContain('LOVE_ADVICE_RULES');
@@ -203,6 +207,10 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).toContain('[LOVE_ADVICE_RULES]');
     expect(logData.userContext).toContain('조언 방향:');
     expect(logData.userContext).toContain('실행 예시:');
+    expect(logData.userContext).toContain('매력 묘사가 우선');
+    expect(logData.userContext).toContain('매력 설명을 대체하지 않는다');
+    expect(logData.userContext).toContain('표정, 시선, 자세, 몸의 사용');
+    expect(logData.userContext).toContain('현재 어떤 정서적 매력, 외적·표현 매력, 성적 끌림의 분위기');
     expect(logData.userContext).toContain('섹션 1~5는 최대 2개, 섹션 6은 최대 3개, 전체 최대 6개');
     expect(logData.userContext).not.toContain('source_excerpt');
     expect(logData.userContext).not.toContain('sourceBook');

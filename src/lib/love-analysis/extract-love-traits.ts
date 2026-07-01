@@ -96,7 +96,7 @@ export const extractLoveTraits = (input: ExtractLoveTraitsInput): LoveTraitFindi
     id: "trait-section-3-charm-asset",
     section: 3,
     source: "chart",
-    finding: `${genderLabel}은 첫인상, 정서 반응, 신체적 표현, 외부 분위기가 합쳐질 때 설득력이 생긴다.`,
+    finding: `${genderLabel}은 현재 어떤 정서적 매력, 외적·표현 매력, 성적 끌림의 분위기로 전달되는지 먼저 설명해야 한다. 조언은 매력 묘사 뒤에 붙는 보조 정보다.`,
     evidence: [
       formatPalaceEvidence("명궁", input.lifePalace),
       formatPalaceEvidence("복덕궁", input.fortunePalace),

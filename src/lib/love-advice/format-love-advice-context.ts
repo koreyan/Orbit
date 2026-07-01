@@ -10,6 +10,7 @@ export const formatLoveAdviceContext = (matches: MatchedLoveAdviceRule[]): strin
 - 역할: 아래 rule은 자미두수 해석을 새로 만들지 않고, 이미 도출된 문제점에 대한 행동 조언으로만 사용한다.
 - 제한: 섹션 1~5는 최대 2개, 섹션 6은 최대 3개, 전체 최대 6개 rule만 사용한다.
 - 출력 금지: 최종 리포트에는 내부 rule 식별자와 출처 정보를 노출하지 않는다.
+- 3번 매력 섹션 제한: 아래 rule을 사용하더라도 매력 설명을 대체하지 않는다. 3번 섹션에서는 현재 매력 묘사와 상대 반응을 먼저 쓰고, rule 기반 조언은 마지막 보조 문장으로만 쓴다.
 ${matches.map((match, index) => `${index + 1}. ${match.rule.ruleId} / ${match.rule.axisName}
    - 연결 리스크: ${match.matchedRiskTypes.join(", ")}
    - 연결 섹션: ${match.matchedSections.join(", ")}
