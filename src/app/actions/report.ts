@@ -1,13 +1,34 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { filterThemePalaces, findLuStarPalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
+import * as fs from "fs";
+import * as path from "path";
+import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
+import type { ExtractedChart, ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import { formatLoveReportContext } from "@/lib/report-prompts/love-context";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
+
+interface RuntimeChartPalace {
+  zhi: string;
+}
+
+interface RuntimeChartData {
+  palaces: Record<string, RuntimeChartPalace>;
+  shenGongZhi: string;
+}
+
+interface RuntimeLiunianData {
+  daxianPalaceName: string;
+  daxianAgeStart: number;
+  daxianAgeEnd: number;
+  palaces: Record<string, string>;
+}
+
+const asRuntimeChartData = (value: unknown): RuntimeChartData => value as RuntimeChartData;
+const asRuntimeLiunianData = (value: unknown): RuntimeLiunianData => value as RuntimeLiunianData;
 
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
@@ -47,7 +68,7 @@ export async function generateReportAction(orderId: string) {
   }
 
   const { theme, saju_data } = order;
-  const extractedStars = saju_data?.extracted_stars;
+  const extractedStars = saju_data?.extracted_stars as ExtractedChart | undefined;
 
   if (!extractedStars) {
     throw new Error("명반 추출 데이터가 없습니다.");
@@ -90,8 +111,8 @@ export async function generateReportAction(orderId: string) {
 
   // 3-1. 대한(Da Han) 및 유년(Liu Nian) 테마 궁 추출
   let periodicPalacesInfo = "";
-  let daHanThemePalaces: any[] = [];
-  let liuNianThemePalaces: any[] = [];
+  const daHanThemePalaces: ExtractedPalace[] = [];
+  const liuNianThemePalaces: ExtractedPalace[] = [];
   let shenGongPalaceName = "알 수 없음";
 
   try {
@@ -100,9 +121,10 @@ export async function generateReportAction(orderId: string) {
       const [y, m, d] = date.split("-").map(Number);
       const [h, min] = time.split(":").map(Number);
       const isMale = gender === "M";
-      const chartData = createChart(y, m, d, h, min, isMale);
+      const generatedChart = createChart(y, m, d, h, min, isMale);
+      const chartData = asRuntimeChartData(generatedChart);
       const currentYear = new Date().getFullYear();
-      const liunian = calculateLiunian(chartData, currentYear);
+      const liunian = asRuntimeLiunianData(calculateLiunian(generatedChart, currentYear));
 
       const shengongTranslation: Record<string, string> = {
         '命宮': '명궁',
@@ -113,7 +135,7 @@ export async function generateReportAction(orderId: string) {
         '福德': '복덕궁'
       };
       const shenGongZhi = chartData.shenGongZhi;
-      const matchingShenGong = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === shenGongZhi);
+      const matchingShenGong = Object.entries(chartData.palaces).find(([, palace]) => palace.zhi === shenGongZhi);
       if (matchingShenGong) {
         shenGongPalaceName = shengongTranslation[matchingShenGong[0]] || matchingShenGong[0];
       }
@@ -121,30 +143,34 @@ export async function generateReportAction(orderId: string) {
       // 궁위 매핑: 0: 명궁, 2: 부처궁, 3: 자녀궁, 4: 재백궁, 5: 질액궁, 6: 천이궁, 8: 관록궁, 10: 복덕궁
       const PALACE_ORDER = ['命宮', '兄弟', '夫妻', '子女', '財帛', '疾厄', '遷移', '交友', '官祿', '田宅', '福德', '父母'];
 
-      let targetOffsets: number[] = [];
-      if (theme === 'career') targetOffsets = [8, 4]; // 관록, 재백
-      else if (theme === 'love') targetOffsets = [2, 6, 3]; // 부처, 천이, 자녀
-      else if (theme === 'hobby') targetOffsets = [5, 10]; // 질액, 복덕
-      else targetOffsets = [8, 4];
+      const targetOffsets = theme === 'career'
+        ? [8, 4]
+        : theme === 'love'
+          ? [2, 6, 3]
+          : theme === 'hobby'
+            ? [5, 10]
+            : [8, 4];
 
       // 대한 테마 궁 찾기 (daxianPalaceName 기준 오프셋)
       const daxianMingIndex = PALACE_ORDER.indexOf(liunian.daxianPalaceName);
       if (daxianMingIndex !== -1) {
-        targetOffsets.forEach(offset => {
+        targetOffsets.forEach((offset) => {
           const targetName = PALACE_ORDER[(daxianMingIndex + offset) % 12];
-          if (extractedStars[targetName]) daHanThemePalaces.push({ name: targetName, ...extractedStars[targetName] });
+          const targetPalace = extractedStars[targetName];
+          if (targetPalace) daHanThemePalaces.push(targetPalace);
         });
       }
 
       // 유년 테마 궁 찾기 (liunian.palaces 기준 지지)
-      targetOffsets.forEach(offset => {
+      targetOffsets.forEach((offset) => {
         const themePalaceName = PALACE_ORDER[offset];
         const targetZhi = liunian.palaces[themePalaceName];
         if (targetZhi) {
-          const matchingPalaceEntry = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === targetZhi);
+          const matchingPalaceEntry = Object.entries(chartData.palaces).find(([, palace]) => palace.zhi === targetZhi);
           if (matchingPalaceEntry) {
             const natalPalaceName = matchingPalaceEntry[0];
-            if (extractedStars[natalPalaceName]) liuNianThemePalaces.push({ name: natalPalaceName, ...extractedStars[natalPalaceName] });
+            const natalPalace = extractedStars[natalPalaceName];
+            if (natalPalace) liuNianThemePalaces.push(natalPalace);
           }
         }
       });
@@ -153,20 +179,18 @@ export async function generateReportAction(orderId: string) {
       let tenYearsInfo = "";
       for (let i = 0; i < 10; i++) {
         const year = currentYear + i;
-        const yearlyLiunian = calculateLiunian(chartData, year);
+        const yearlyLiunian = asRuntimeLiunianData(calculateLiunian(generatedChart, year));
 
         // 해당 연도의 유년 명궁 찾기
         const liunianMingZhi = yearlyLiunian.palaces['命宮'];
         let mingPalaceInfo = "데이터 없음";
         if (liunianMingZhi) {
-          const matchingEntry = Object.entries(chartData.palaces).find(([_, p]: [string, any]) => p.zhi === liunianMingZhi);
-          if (matchingEntry && extractedStars[matchingEntry[0]]) {
-            mingPalaceInfo = formatPalaceStars(extractedStars[matchingEntry[0]]);
-            // 분석 대상 별 추가
-            if (extractedStars[matchingEntry[0]].majorStars) {
-              extractedStars[matchingEntry[0]].majorStars.forEach((s: any) => {
-                daHanThemePalaces.push({ name: matchingEntry[0], ...extractedStars[matchingEntry[0]] });
-              });
+          const matchingEntry = Object.entries(chartData.palaces).find(([, palace]) => palace.zhi === liunianMingZhi);
+          if (matchingEntry) {
+            const mingPalace = extractedStars[matchingEntry[0]];
+            if (mingPalace) {
+              mingPalaceInfo = formatPalaceStars(mingPalace);
+              daHanThemePalaces.push(mingPalace);
             }
           }
         }
@@ -185,26 +209,29 @@ ${tenYearsInfo}
 
   // 분석 대상 별 추출 (중복 제거)
   const starsToAnalyze = new Set<string>();
-  const addStars = (palace: any) => {
+  const addStars = (palace?: ExtractedPalace | null) => {
     if (!palace) return;
-    if (palace.majorStars) palace.majorStars.forEach((s: any) => {
-      starsToAnalyze.add(s.name);
-      if (s.sihua) starsToAnalyze.add(s.sihua);
-    });
-    if (palace.luckyStars) palace.luckyStars.forEach((s: any) => {
-      starsToAnalyze.add(s.name);
-      if (s.sihua) starsToAnalyze.add(s.sihua);
-    });
-    if (palace.unluckyStars) palace.unluckyStars.forEach((s: any) => {
-      starsToAnalyze.add(s.name);
-      if (s.sihua) starsToAnalyze.add(s.sihua);
+    const starGroups = [palace.majorStars, palace.luckyStars, palace.unluckyStars];
+    starGroups.flat().forEach((star) => {
+      starsToAnalyze.add(star.name);
+      if (star.sihua) starsToAnalyze.add(star.sihua);
     });
   };
 
   addStars(lifePalace);
-  themePalaces.forEach((p: any) => addStars(p));
+  themePalaces.forEach((p: ExtractedPalace) => addStars(p));
   daHanThemePalaces.forEach(p => addStars(p));
   liuNianThemePalaces.forEach(p => addStars(p));
+
+  if (theme === 'love') {
+    [
+      extractedStars['福德'],
+      extractedStars['官祿'],
+      extractedStars['交友'],
+      extractedStars['父母'],
+      extractedStars['兄弟'],
+    ].forEach((palace) => addStars(palace));
+  }
 
   // 4. 커리어 테마 전용: 자산 축적 방식(록존) 및 변화의 기운(4화)
   let luStarPalacesInfo = "";
@@ -380,69 +407,62 @@ ${tenYearsInfo}
 `,
 
     love: `
-당신은 현대적이고 트렌디한 관계 심리 분석가이자 매력 컨설턴트입니다. 유저의 자미두수 명반 데이터를 기반으로 MBTI 결과지처럼 직관적이고 뼈를 때리는 연애/매력 리포트를 작성합니다.
-결과물은 점술 해설이 아니라, “나는 관계에서 어떻게 반응하고, 어떤 매력으로 사람을 끌어당기며, 그 매력이 과해질 때 어떤 문제가 생기는가”를 보여주는 자기이해형 콘텐츠여야 합니다.
+당신은 현대적이고 트렌디한 관계 심리 분석가이자 매력 컨설턴트입니다. 유저의 자미두수 명반 데이터를 기반으로, 싱글 사용자가 “나는 연애에서 어떻게 반응하고, 어떤 사람에게 끌리며, 어떤 매력으로 호감을 만들고, 어디서 반복적으로 꼬이는지”를 이해하도록 돕는 자기이해형 리포트를 작성합니다.
 
-[핵심 역할]
-- 명궁 데이터를 기반으로 유저의 기본 성향, 첫 반응, 기본 인상, 관계에 들어가기 전의 디폴트 기질을 먼저 깔아둡니다.
-- 부처궁 데이터를 기반으로 관계에서의 감정 반응, 끌리는 사랑의 분위기, 관계에서 기대하는 것, 예민해지는 포인트를 해석합니다.
-- 자녀궁 데이터를 기반으로 본능적 매력, 플러팅 방식, 가까워질수록 드러나는 매력, 친밀감의 분위기를 해석합니다.
-- 명궁을 기본값으로 깔고, 부처궁과 자녀궁의 해석을 분리해서 나열하지 말고, 한 사람의 연애 성향과 매력이 하나의 흐름처럼 읽히도록 연결합니다.
+[핵심 운영 원칙]
+- 최종 결과물은 점술 해설이 아니라 관계 심리 리포트처럼 읽혀야 합니다.
+- 명반 용어, 별 이름, 궁 이름은 최종 출력에 직접 쓰지 않습니다. 입력 데이터의 근거를 반드시 생활 언어로 번역합니다.
+- 조언, 처방, 훈련법 중심으로 쓰지 않습니다. 먼저 사용자의 실제 성향·끌림·매력·문제 패턴·올해 흐름을 설명합니다.
+- 모든 해석은 user context의 [LOVE_DATA_STRATEGY], [SECTION_REFERENCE_GUIDE], [LOVE_PALACE_DATA], [LOVE_PROBLEM_SIGNALS], [LOVE_TIMING_DATA], [LOVE_STAR_EVIDENCE]만 근거로 사용합니다.
+- 일반적인 연애 조언이나 누구에게나 맞는 문장으로 흐리지 않습니다.
 
----
+[출력 섹션]
+아래 5개 섹션 제목과 순서를 그대로 유지합니다.
 
-[출력 목표]
-다음 6개 섹션으로만 리포트를 작성합니다.
+1. 연애 한 줄 정의
+2. 내가 끌리는 사람 유형
+3. 나의 매력 자산
+4. 연애 관점으로 본 나의 문제
+5. 애정운
 
-1. 좋아하면 내가 달라지는 방식
-2. 나는 어떤 사랑에 약한가
-3. 관계에서 은근히 기대하는 것
-4. 나도 모르게 사람을 홀리는 방식
-5. 친해질수록 진짜 매력이 나오는 지점
-6. 가까워질수록 조심해야 하는 내 그림자
+[섹션별 작성 기준]
+1. 연애 한 줄 정의
+- 명궁, 부처궁, 복덕궁, 자녀궁을 함께 읽습니다.
+- 기본 반응, 사랑에 빠졌을 때의 모습, 관계의 첫인상, 가까워졌을 때의 분위기를 한 문장 정의 후 2~3문단으로 풀이합니다.
 
-각 섹션은 입력 데이터에서 가장 강하게 드러나는 근거를 골라 자유롭게 해석합니다.
-섹션 제목은 유지하되, 섹션별 해석 공식에 억지로 맞추지 않습니다.
+2. 내가 끌리는 사람 유형
+- 부처궁을 최우선으로 보고, 관록궁과 부처궁 삼방사정(복덕궁/천이궁/관록궁)을 보조로 봅니다.
+- 편안한 관계와 끌리는 관계가 다르면 그 차이를 분명히 설명합니다.
+- 상대 타입은 직업명보다 관계에서 체감되는 태도와 분위기로 씁니다.
 
----
+3. 나의 매력 자산
+- 명궁은 첫인상, 자녀궁은 본능적 매력과 플러팅, 복덕궁은 정서적 매력, 천이궁은 밖에서 보이는 이미지로 사용합니다.
+- 염정/천량/탐랑/파군/문곡/홍란 신호가 있으면 매력 성질별 세부 포인트로 반영합니다.
+- 성적 끌림은 안정감·따뜻함으로 뭉개지 말고, 시선·표정·말투·거리감·분위기·몸의 사용처럼 체감 가능한 매력으로 설명합니다.
 
-[작성 방식]
-- 모든 섹션은 명궁의 기본 성향을 디폴트 톤으로 깔고, 부처궁/자녀궁 해석을 그 위에 얹어 작성합니다.
-- 전체 문체는 현대적이고 직관적이어야 합니다.
-- 읽는 사람이 “와, 이거 진짜 나 같다”라고 느낄 정도로 구체적으로 씁니다.
-- MBTI 결과지처럼 술술 읽히되, 표현은 더 날카롭고 감각적이어야 합니다.
-- 자미두수 용어를 과하게 드러내지 말고, 결과물은 관계 심리 분석 리포트처럼 읽히게 합니다.
-- “당신은 원래 이런 사람입니다”처럼 단정하지 말고, 사랑 안에서 이런 모습이 드러난다는 식으로 씁니다.
-- 추상적인 미사여구 대신, 실제 관계에서 체감되는 반응과 분위기로 설명합니다.
+4. 연애 관점으로 본 나의 문제
+- 부처궁 약함 기준, 화기, 살성, 복덕궁, 인간관계 패턴을 함께 봅니다.
+- 살성 1~2개나 화기 1개만으로 나쁘다고 단정하지 않습니다.
+- 감정 과몰입, 확인 욕구, 집착, 관계 리듬 문제, 외부 인연 꼬임, 반복되는 패턴을 같은 성향의 과발현으로 설명합니다.
 
----
+5. 애정운
+- 부처궁, 소한, 유년, 홍란, 천희, 도화, 중첩궁, 살성/화기 신호를 함께 봅니다.
+- 예언처럼 단정하지 말고 올해 어떤 감정 주제가 활성화되고, 어느 환경에서 인연 접점이 늘고, 어떤 신호에서 관계가 꼬이는지 씁니다.
+- 월별 데이터가 부족하면 억지로 월별 표를 만들지 말고, 제공된 유년/대한 흐름 범위 안에서만 서술합니다.
 
-[금지 사항]
-- 점술식 문체, 운세 문체, 상담사 문체로 쓰지 마세요.
-- “좋은 사람을 만나세요”, “이렇게 행동하세요” 같은 조언형 문장을 쓰지 마세요.
-- 성격 유형을 라벨처럼 붙이지 마세요.
-- “매력 있다”, “다정하다” 같은 단어만 던지고 끝내지 마세요. 반드시 어떻게 작동하는 매력인지 설명하세요.
-- 부처궁과 자녀궁 해석을 서로 무관한 두 덩어리처럼 따로 놀게 쓰지 마세요.
-- 일반적인 연애 조언이나 누구에게나 맞는 말로 흐리지 마세요.
+[문체]
+- 현대적이고 직관적인 한국어로 씁니다.
+- “당신은 원래 이런 사람”이 아니라 “연애 상황에서 이런 반응이 드러난다”로 씁니다.
+- 추상적인 미사여구 대신 실제 관계에서 체감되는 반응과 분위기로 설명합니다.
+- 각 섹션은 2~4문단으로 작성합니다.
 
----
+[금지]
+- JSON으로 출력하지 않습니다.
+- 코드펜스와 표를 쓰지 않습니다.
+- 명궁, 부처궁, 복덕궁, 자녀궁, 천이궁, 관록궁, 화기, 살성, 도화, 유년, 소한, 중첩궁, 별 이름을 최종 출력에 쓰지 않습니다.
+- “좋은 사람을 만나세요”, “이렇게 행동하세요” 같은 일반 조언으로 끝내지 않습니다.
 
-[출력 형식]
-출력은 반드시 아래 섹션 제목 순서를 따릅니다.
-
-1. 좋아하면 내가 달라지는 방식
-2. 나는 어떤 사랑에 약한가
-3. 관계에서 은근히 기대하는 것
-4. 나도 모르게 사람을 홀리는 방식
-5. 친해질수록 진짜 매력이 나오는 지점
-6. 가까워질수록 조심해야 하는 내 그림자
-
-각 섹션은 2~4문단 내에서 충분히 밀도 있게 작성합니다.
-섹션마다 중복 표현을 피하고, 서로 다른 각도에서 유저를 읽어내야 합니다.
-
----
-
-출력은 마크다운 본문만 작성합니다. JSON으로 감싸지 않습니다.
+출력은 마크다운 본문만 작성합니다.
 `,
     hobby: `
 당신은 현대인의 라이프스타일 큐레이터이자 멘탈케어 전문가입니다. 유저의 명리학 데이터를 기반으로 MBTI 결과지처럼 직관적이고 뼈를 때리는 웰니스/여가 리포트를 작성합니다.
@@ -468,7 +488,15 @@ ${commonRules}`
     ? formatLoveReportContext({
         lifePalace,
         spousePalace: extractedStars['夫妻'],
+        fortunePalace: extractedStars['福德'],
         childrenPalace: extractedStars['子女'],
+        migrationPalace: extractedStars['遷移'],
+        careerPalace: extractedStars['官祿'],
+        friendsPalace: extractedStars['交友'],
+        parentsPalace: extractedStars['父母'],
+        siblingsPalace: extractedStars['兄弟'],
+        liuNianLovePalaces: liuNianThemePalaces,
+        periodicPalacesInfo,
         knowledgeBase,
       })
     : `
@@ -476,7 +504,7 @@ ${commonRules}`
 
 [유저의 기질 및 운세 데이터 (절대 이 용어들을 결과에 직접 노출하지 말 것)]
 - 타고난 본질: ${formatPalaceStars(lifePalace)}
-- 테마별 행동 방식: ${themePalaces.map((p: any) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
+- 테마별 행동 방식: ${themePalaces.map((p: ExtractedPalace) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
 ${themeSpecificContext}
 ${periodicPalacesInfo}
 
@@ -498,13 +526,11 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
   if (order.saju_data?.e2e_mock_gemini?.startsWith('success_prompt')) {
     if (process.env.NODE_ENV !== "production") {
       try {
-        const fs = require('fs');
-        const path = require('path');
         fs.writeFileSync(
           path.join(process.cwd(), ".gemini_mock.log"),
           JSON.stringify({ systemPrompt, userContext }, null, 2)
         );
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -608,12 +634,12 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
 }
 
 
-/** 궁에 배속된 별 정보를 포맷팅하는 유틸 함수 */
-function formatPalaceStars(palace: any): string {
+function formatPalaceStars(palace?: ExtractedPalace | null): string {
   if (!palace) return "데이터 없음";
-  const major = palace.majorStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
-  const lucky = palace.luckyStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
-  const unlucky = palace.unluckyStars?.map((s: any) => `${s.name}${s.sihua ? `[${s.sihua}]` : ''}`).join(", ") || "";
+  const formatStar = (star: StarWithSiHua) => `${star.name}${star.sihua ? `[${star.sihua}]` : ''}`;
+  const major = palace.majorStars?.map(formatStar).join(", ") || "";
+  const lucky = palace.luckyStars?.map(formatStar).join(", ") || "";
+  const unlucky = palace.unluckyStars?.map(formatStar).join(", ") || "";
   return `핵심 에너지: [${major || '비어있음'}], 보조 에너지: [${lucky || '없음'}], 주의할 에너지: [${unlucky || '없음'}]`;
 }
 

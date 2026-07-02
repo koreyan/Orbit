@@ -151,16 +151,14 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
-    expect(logData.systemPrompt).toContain('docs/ziwei-love-self-understanding-guide.md');
-    expect(logData.systemPrompt).toContain('조언, 처방, 훈련법, 해야 할 일 중심으로 쓰지 않는다');
-    expect(logData.systemPrompt).toContain('1단: 성향');
-    expect(logData.systemPrompt).toContain('2단: 매력');
-    expect(logData.systemPrompt).toContain('3단: 과발현');
-    expect(logData.systemPrompt).toContain('4단: 관계 환경');
-    expect(logData.systemPrompt).toContain('중간 패킷만 근거로 사용한다');
-    expect(logData.systemPrompt).toContain('최종 출력 용어 변환 규칙');
-    expect(logData.systemPrompt).toContain('별 이름을 쓰지 않는다');
-    expect(logData.systemPrompt).toContain('생활 언어로 치환한다');
+    expect(logData.systemPrompt).toContain('연애 한 줄 정의');
+    expect(logData.systemPrompt).toContain('내가 끌리는 사람 유형');
+    expect(logData.systemPrompt).toContain('나의 매력 자산');
+    expect(logData.systemPrompt).toContain('연애 관점으로 본 나의 문제');
+    expect(logData.systemPrompt).toContain('애정운');
+    expect(logData.systemPrompt).toContain('조언, 처방, 훈련법 중심으로 쓰지 않습니다');
+    expect(logData.systemPrompt).toContain('별 이름, 궁 이름은 최종 출력에 직접 쓰지 않습니다');
+    expect(logData.systemPrompt).toContain('생활 언어로 번역합니다');
     expect(logData.systemPrompt).not.toContain('LOVE_ADVICE_RULES');
     expect(logData.systemPrompt).not.toContain('연애 조언 생성 파이프라인');
     expect(logData.systemPrompt).not.toContain('조언 후처리');
@@ -169,51 +167,40 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).not.toContain('소유');
     expect(logData.systemPrompt).not.toContain('밀당');
     expect(logData.systemPrompt).not.toContain('조종');
-    expect(logData.systemPrompt).not.toContain('data 디렉터리 근거');
-    expect(logData.systemPrompt).not.toContain('정서적 매력과 외적 매력을 통합');
     expect(logData.systemPrompt).not.toContain('3-2. 잠재된 이성적 매력');
-    expect(logData.systemPrompt).not.toContain('천이궁은 외부 반응과 인기의 보조 근거로만 사용합니다');
     expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
     
-    // 연애 전용 컨텍스트 검증: guide packet stack
-    expect(logData.userContext).toContain('[USER_CHART_DATA]');
-    expect(logData.userContext).toContain('[FIXED_ZIWEI_REFERENCE]');
-    expect(logData.userContext).toContain('[DYNAMIC_DB_EVIDENCE]');
-    expect(logData.userContext).toContain('[GUIDE_TRANSLATION_PACKET]');
-    expect(logData.userContext).toContain('[1단: 성향]');
-    expect(logData.userContext).toContain('[2단: 매력]');
-    expect(logData.userContext).toContain('[3단: 과발현]');
-    expect(logData.userContext).toContain('[4단: 관계 환경]');
-    expect(logData.userContext).toContain('[CHARM_PACKET]');
-    expect(logData.userContext).toContain('[ENVIRONMENT_PACKET]');
-    expect(logData.userContext).toContain('[TIMING_PACKET]');
-    expect(logData.userContext).toContain('[MONTHLY_LIUYUE_FLOW]');
-    expect(logData.userContext).toContain('- 1월');
-    expect(logData.userContext).toContain('- 12월');
-    expect(logData.userContext).toContain('월별 중심 궁위:');
-    expect(logData.userContext).toContain('주요 별:');
-    expect(logData.userContext).toContain('호감/인연 신호:');
-    expect(logData.userContext).toContain('주의 신호:');
-    expect(logData.userContext).toContain('해석 근거:');
-    expect(logData.userContext).toContain('예상 상황:');
-    expect(logData.userContext).toContain('태그별 보강 근거');
+    // 연애 전용 컨텍스트 검증: 5섹션 데이터 정규화 패킷
+    expect(logData.userContext).toContain('[LOVE_DATA_STRATEGY]');
+    expect(logData.userContext).toContain('[SECTION_REFERENCE_GUIDE]');
+    expect(logData.userContext).toContain('[LOVE_PALACE_DATA]');
+    expect(logData.userContext).toContain('[SPOUSE_TRIAD_STRUCTURE]');
+    expect(logData.userContext).toContain('[PARTNER_TYPE_REFERENCE]');
+    expect(logData.userContext).toContain('[CHARM_ASSET_REFERENCE]');
+    expect(logData.userContext).toContain('[LOVE_PROBLEM_SIGNALS]');
+    expect(logData.userContext).toContain('[ENCOUNTER_PATH_REFERENCE]');
+    expect(logData.userContext).toContain('[LOVE_TIMING_DATA]');
+    expect(logData.userContext).toContain('[LOVE_STAR_EVIDENCE]');
+    expect(logData.userContext).toContain('AI가 참고할 데이터: 명궁, 부처궁, 복덕궁, 자녀궁');
+    expect(logData.userContext).toContain('AI가 참고할 데이터: 부처궁, 관록궁, 부처궁 삼방사정');
+    expect(logData.userContext).toContain('AI가 참고할 데이터: 명궁, 자녀궁, 복덕궁, 천이궁');
+    expect(logData.userContext).toContain('AI가 참고할 데이터: 부처궁 약함 기준, 화기, 살성');
+    expect(logData.userContext).toContain('AI가 참고할 데이터: 부처궁, 소한, 유년');
+    expect(logData.userContext).toContain('[복덕궁]');
+    expect(logData.userContext).toContain('[천이궁]');
+    expect(logData.userContext).toContain('[관록궁]');
+    expect(logData.userContext).toContain('[노복궁]');
+    expect(logData.userContext).toContain('부처궁 삼방사정 살성 수:');
+    expect(logData.userContext).toContain('10년 흐름 원문:');
     expect(logData.userContext).not.toContain('[TRAIT_FINDINGS]');
     expect(logData.userContext).not.toContain('[RISK_PATTERNS]');
     expect(logData.userContext).not.toContain('[LOVE_ADVICE_RULES]');
     expect(logData.userContext).not.toContain('조언 방향:');
     expect(logData.userContext).not.toContain('실행 예시:');
     expect(logData.userContext).not.toContain('action_guide');
-    expect(logData.userContext).not.toContain('시기별 조언:');
-    expect(logData.userContext).not.toContain('커리어 방향성:');
-    expect(logData.userContext).not.toContain('웰니스/여가:');
-    expect(logData.userContext).not.toContain('섹션 1~5는 최대 2개, 섹션 6은 최대 3개, 전체 최대 6개');
     expect(logData.userContext).not.toContain('source_excerpt');
     expect(logData.userContext).not.toContain('sourceBook');
-    expect(logData.userContext).toContain('가까워질수록 드러나는 매력');
-    expect(logData.userContext).toContain('같은 성향의 건강한 발현과 과발현');
     expect(logData.userContext).not.toContain('[CHARM_ACTION_RULES]');
-    expect(logData.userContext).not.toContain('상대 이성이 체감하는 장면:');
-    expect(logData.userContext).not.toContain('여성에게 어필되는 장면:');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {

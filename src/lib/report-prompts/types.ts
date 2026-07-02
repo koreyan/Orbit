@@ -8,7 +8,17 @@ export type LoveEvidenceTag =
   | "timing_signal"
   | "action_guide";
 
-export type LovePalaceRole = "life" | "spouse" | "children";
+export type LovePalaceRole =
+  | "life"
+  | "spouse"
+  | "fortune"
+  | "children"
+  | "migration"
+  | "career"
+  | "friends"
+  | "parents"
+  | "siblings"
+  | "timing";
 
 export interface LoveStarSignal {
   name: string;
