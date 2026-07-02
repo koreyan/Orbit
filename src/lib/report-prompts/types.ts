@@ -8,10 +8,25 @@ export type LoveEvidenceTag =
   | "timing_signal"
   | "action_guide";
 
-export interface LoveSectionEvidence {
-  section: string;
-  primaryPalaces: string[];
-  directEvidenceLimit: number;
-  requiredTags: LoveEvidenceTag[];
-  writingInstruction: string;
+export type LovePalaceRole = "life" | "spouse" | "children";
+
+export interface LoveStarSignal {
+  name: string;
+  sihua: string | null;
 }
+
+export interface LovePalaceSnapshot {
+  label: string;
+  role: LovePalaceRole;
+  majorStars: LoveStarSignal[];
+  luckyStars: LoveStarSignal[];
+  unluckyStars: LoveStarSignal[];
+  borrowed?: boolean;
+}
+
+export interface LoveKnowledgeEntry {
+  core_trait?: string;
+  love_insight?: string;
+}
+
+export type LoveKnowledgeBase = Record<string, LoveKnowledgeEntry>;
