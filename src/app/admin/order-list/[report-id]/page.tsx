@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { fetchOrderDetail } from '@/lib/api/admin';
+import { formatKoreanDateTime } from '@/lib/format/korean-date-time';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import RegenerateButton from './RegenerateButton';
@@ -38,7 +39,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               </div>
               <div className="flex justify-between gap-4">
                 <span className="shrink-0 text-gray-400">주문 시간:</span>
-                <span className="text-right font-medium text-white">{new Date(orderDetail.createdAt).toLocaleString('ko-KR')}</span>
+                <span className="text-right font-medium text-white">{formatKoreanDateTime(orderDetail.createdAt)}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="shrink-0 text-gray-400">연락처:</span>

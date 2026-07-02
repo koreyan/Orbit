@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { fetchOrders } from '@/lib/api/admin';
 import type { Order } from '@/lib/api/admin';
+import { formatKoreanDateTime } from '@/lib/format/korean-date-time';
 
 export const metadata = {
   title: '주문 내역 리스트 | Orbit Admin',
@@ -80,7 +81,7 @@ export default async function AdminOrderListPage(
             <dl className="grid grid-cols-1 gap-3">
               <div className="flex justify-between gap-4">
                 <dt className="text-gray-400">주문 시간</dt>
-                <dd className="text-right text-white">{new Date(order.createdAt).toLocaleString('ko-KR')}</dd>
+                <dd className="text-right text-white">{formatKoreanDateTime(order.createdAt)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-gray-400">연락처</dt>
@@ -140,7 +141,7 @@ export default async function AdminOrderListPage(
                       <span className="text-gray-400">{order.id}</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">{new Date(order.createdAt).toLocaleString('ko-KR')}</td>
+                  <td className="px-6 py-4">{formatKoreanDateTime(order.createdAt)}</td>
                   <td className="px-6 py-4">{order.phoneNumber}</td>
                   <td className="px-6 py-4">{getThemeLabel(order.theme)}</td>
                   <td className="px-6 py-4">{order.amount.toLocaleString()}원</td>
