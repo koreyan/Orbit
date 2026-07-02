@@ -18,7 +18,8 @@ export type LovePalaceRole =
   | "friends"
   | "parents"
   | "siblings"
-  | "timing";
+  | "timing"
+  | "other";
 
 export interface LoveStarSignal {
   name: string;
@@ -26,6 +27,7 @@ export interface LoveStarSignal {
 }
 
 export interface LovePalaceSnapshot {
+  key: string;
   label: string;
   role: LovePalaceRole;
   majorStars: LoveStarSignal[];
@@ -35,8 +37,12 @@ export interface LovePalaceSnapshot {
 }
 
 export interface LoveKnowledgeEntry {
+  target_subject?: string;
   core_trait?: string;
+  career_insight?: string;
   love_insight?: string;
+  wellness_insight?: string;
+  periodic_insight?: string;
 }
 
 export type LoveKnowledgeBase = Record<string, LoveKnowledgeEntry>;

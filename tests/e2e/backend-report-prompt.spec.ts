@@ -139,8 +139,10 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     // 커리어 전용 지침 포함 여부
     expect(logData.systemPrompt).toContain('자미두수 커리어 코칭');
     
-    // 유저 컨텍스트 검증 (숨겨진 금광 등)
-    expect(logData.userContext).toContain('선택한 테마: career');
+    // 유저 컨텍스트 검증: 단일 JSON 유저 메시지
+    expect(logData.genericUserMessageJson.request.theme).toBe('career');
+    expect(logData.genericUserMessageJson.chart.source).toBe('orrery');
+    expect(logData.userContext).toBe(JSON.stringify(logData.genericUserMessageJson));
   });
 
   test('연애(love) 테마 프롬프트 분기 및 검증', async ({ page }) => {
@@ -170,34 +172,28 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).not.toContain('3-2. 잠재된 이성적 매력');
     expect(logData.systemPrompt).not.toContain('현재 매력 → 오작동 → 훈련법');
     
-    // 연애 전용 컨텍스트 검증: 5섹션 데이터 정규화 패킷
-    expect(logData.userContext).toContain('[LOVE_DATA_STRATEGY]');
-    expect(logData.userContext).toContain('[SECTION_REFERENCE_GUIDE]');
-    expect(logData.userContext).toContain('[LOVE_PALACE_DATA]');
-    expect(logData.userContext).toContain('[SPOUSE_TRIAD_STRUCTURE]');
-    expect(logData.userContext).toContain('[PARTNER_TYPE_REFERENCE]');
-    expect(logData.userContext).toContain('[CHARM_ASSET_REFERENCE]');
-    expect(logData.userContext).toContain('[LOVE_PROBLEM_SIGNALS]');
-    expect(logData.userContext).toContain('[ENCOUNTER_PATH_REFERENCE]');
-    expect(logData.userContext).toContain('[LOVE_TIMING_DATA]');
-    expect(logData.userContext).toContain('[LOVE_STAR_EVIDENCE]');
-    expect(logData.userContext).toContain('AI가 참고할 데이터: 명궁, 부처궁, 복덕궁, 자녀궁');
-    expect(logData.userContext).toContain('AI가 참고할 데이터: 부처궁, 관록궁, 부처궁 삼방사정');
-    expect(logData.userContext).toContain('AI가 참고할 데이터: 명궁, 자녀궁, 복덕궁, 천이궁');
-    expect(logData.userContext).toContain('AI가 참고할 데이터: 부처궁 약함 기준, 화기, 살성');
-    expect(logData.userContext).toContain('AI가 참고할 데이터: 부처궁, 소한, 유년');
-    expect(logData.userContext).toContain('[복덕궁]');
-    expect(logData.userContext).toContain('[천이궁]');
-    expect(logData.userContext).toContain('[관록궁]');
-    expect(logData.userContext).toContain('[노복궁]');
-    expect(logData.userContext).toContain('부처궁 삼방사정 살성 수:');
-    expect(logData.userContext).toContain('10년 흐름 원문:');
+    // 연애 전용 컨텍스트 검증: 단일 JSON 유저 메시지
+    expect(logData.loveUserMessageJson.request.theme).toBe('love');
+    expect(logData.loveUserMessageJson.request.outputFormat).toBe('markdown');
+    expect(logData.loveUserMessageJson.userInput.birthDate).toBe('1990-01-01');
+    expect(logData.loveUserMessageJson.chart.source).toBe('orrery');
+    expect(logData.loveUserMessageJson.chart.palaces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '명궁', role: 'life' }),
+        expect.objectContaining({ label: '부처궁', role: 'spouse' }),
+        expect.objectContaining({ label: '복덕궁', role: 'fortune' }),
+        expect.objectContaining({ label: '자녀궁', role: 'children' })
+      ])
+    );
+    expect(logData.loveUserMessageJson.dictionaryMatches.byLoveTag).toHaveProperty('charm_asset');
+    expect(logData.userContext).toBe(JSON.stringify(logData.loveUserMessageJson));
+    expect(logData.userContext).not.toContain('[LOVE_PALACE_DATA]');
+    expect(logData.userContext).not.toContain('[LOVE_STAR_EVIDENCE]');
     expect(logData.userContext).not.toContain('[TRAIT_FINDINGS]');
     expect(logData.userContext).not.toContain('[RISK_PATTERNS]');
     expect(logData.userContext).not.toContain('[LOVE_ADVICE_RULES]');
     expect(logData.userContext).not.toContain('조언 방향:');
     expect(logData.userContext).not.toContain('실행 예시:');
-    expect(logData.userContext).not.toContain('action_guide');
     expect(logData.userContext).not.toContain('source_excerpt');
     expect(logData.userContext).not.toContain('sourceBook');
     expect(logData.userContext).not.toContain('[CHARM_ACTION_RULES]');
@@ -207,14 +203,17 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     await loginAsThemeUser(page, 'hobby');
     await page.goto(`/reports/${dummyOrderIds['hobby']}`);
     
-    await expect(page.getByRole('heading', { name: '"Mock Teaser for hobby"' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '나의 회복과 라이프 이야기' })).toBeVisible({ timeout: 10000 });
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
     assertJargonFreeRule(logData.systemPrompt);
     
-    // 여가 전용 지침 포함 여부
+    // 여가 전용 지침 및 JSON 유저 메시지 검증
     expect(logData.systemPrompt).toContain('[여가/웰니스 테마 특수 지침]');
+    expect(logData.genericUserMessageJson.request.theme).toBe('hobby');
+    expect(logData.genericUserMessageJson.request.outputFormat).toBe('json');
+    expect(logData.userContext).toBe(JSON.stringify(logData.genericUserMessageJson));
   });
 
 });

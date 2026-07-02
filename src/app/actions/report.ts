@@ -5,8 +5,13 @@ import * as fs from "fs";
 import * as path from "path";
 import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import type { ExtractedChart, ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
-import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
-import { formatLoveReportContext } from "@/lib/report-prompts/love-context";
+import {
+  fetchKnowledgeBaseByLoveTags,
+  fetchKnowledgeBaseForLove,
+  fetchKnowledgeBaseForStars,
+} from "@/lib/knowledge-base";
+import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
+import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
@@ -29,6 +34,114 @@ interface RuntimeLiunianData {
 
 const asRuntimeChartData = (value: unknown): RuntimeChartData => value as RuntimeChartData;
 const asRuntimeLiunianData = (value: unknown): RuntimeLiunianData => value as RuntimeLiunianData;
+
+const LOVE_EVIDENCE_TAGS: LoveEvidenceTag[] = [
+  "attraction_pattern",
+  "compatible_partner",
+  "conflict_pattern",
+  "solo_blocker",
+  "charm_asset",
+  "encounter_path",
+  "timing_signal",
+  "action_guide",
+];
+
+const collectStarNamesFromPalace = (palace?: ExtractedPalace | null): string[] => {
+  if (!palace) return [];
+  return [palace.majorStars ?? [], palace.luckyStars ?? [], palace.unluckyStars ?? []]
+    .flat()
+    .flatMap((star) => star.sihua ? [star.name, star.sihua] : [star.name]);
+};
+
+const uniqueTerms = (terms: string[]): string[] => (
+  Array.from(new Set(terms.map((term) => term.trim()).filter(Boolean)))
+);
+
+const buildLoveDictionaryTerms = (extractedStars: ExtractedChart) => {
+  const palaces = Object.values(extractedStars);
+  const starTerms = uniqueTerms(palaces.flatMap(collectStarNamesFromPalace));
+  const palaceTerms = uniqueTerms(
+    palaces.flatMap((palace) => {
+      const starNames = collectStarNamesFromPalace(palace);
+      return [
+        palace.name,
+        ...starNames.map((starName) => `${palace.name} ${starName}`),
+      ];
+    })
+  );
+  const formationTerms = uniqueTerms([
+    ...starTerms,
+    ...palaceTerms,
+    "삼방사정",
+    "도화",
+    "화기",
+    "살성",
+    "길성",
+    "홍란",
+    "천희",
+  ]);
+
+  return { starTerms, palaceTerms, formationTerms };
+};
+
+const buildGenericReportUserMessageJson = ({
+  theme,
+  sajuData,
+  extractedStars,
+  lifePalace,
+  themePalaces,
+  knowledgeBase,
+  themeSpecificContext,
+  periodicPalacesInfo,
+}: {
+  theme: string;
+  sajuData: Record<string, unknown>;
+  extractedStars: ExtractedChart;
+  lifePalace: ExtractedPalace | null | undefined;
+  themePalaces: ExtractedPalace[];
+  knowledgeBase: Record<string, {
+    target_subject?: string;
+    core_trait?: string;
+    career_insight?: string;
+    love_insight?: string;
+    wellness_insight?: string;
+    periodic_insight?: string;
+  }>;
+  themeSpecificContext: string;
+  periodicPalacesInfo: string;
+}) => ({
+  request: {
+    theme,
+    outputFormat: theme === 'hobby' ? 'json' : 'markdown',
+  },
+  userInput: {
+    birthDate: typeof sajuData.date === 'string' ? sajuData.date : null,
+    birthTime: typeof sajuData.time === 'string' ? sajuData.time : null,
+    gender: typeof sajuData.gender === 'string' ? sajuData.gender : null,
+    location: typeof sajuData.location === 'string' ? sajuData.location : null,
+  },
+  chart: {
+    source: 'orrery',
+    lifePalace,
+    themePalaces,
+    rawExtractedStars: extractedStars,
+  },
+  dictionaryMatches: {
+    byStar: Object.entries(knowledgeBase).map(([matchedTerm, entry]) => ({
+      matchedTerm,
+      targetSubject: entry.target_subject,
+      coreTrait: entry.core_trait,
+      careerInsight: entry.career_insight,
+      loveInsight: entry.love_insight,
+      wellnessInsight: entry.wellness_insight,
+      periodicInsight: entry.periodic_insight,
+    })),
+  },
+  themeSpecificContext,
+  timing: {
+    periodicFlowText: periodicPalacesInfo,
+  },
+});
 
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
@@ -211,7 +324,7 @@ ${tenYearsInfo}
   const starsToAnalyze = new Set<string>();
   const addStars = (palace?: ExtractedPalace | null) => {
     if (!palace) return;
-    const starGroups = [palace.majorStars, palace.luckyStars, palace.unluckyStars];
+    const starGroups = [palace.majorStars ?? [], palace.luckyStars ?? [], palace.unluckyStars ?? []];
     starGroups.flat().forEach((star) => {
       starsToAnalyze.add(star.name);
       if (star.sihua) starsToAnalyze.add(star.sihua);
@@ -267,6 +380,18 @@ ${tenYearsInfo}
   // 5. 지식베이스 (Ground Truth) 로드
 
   const knowledgeBase = await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
+  const loveDictionaryTerms = theme === 'love' ? buildLoveDictionaryTerms(extractedStars) : null;
+  const loveDictionaryEntries = loveDictionaryTerms
+    ? await fetchKnowledgeBaseForLove(
+        adminClient,
+        loveDictionaryTerms.starTerms,
+        loveDictionaryTerms.palaceTerms,
+        loveDictionaryTerms.formationTerms
+      )
+    : [];
+  const loveTagMatches = theme === 'love'
+    ? await fetchKnowledgeBaseByLoveTags(adminClient, LOVE_EVIDENCE_TAGS, 8)
+    : null;
 
   // 6. 테마별 맞춤형 시스템 프롬프트 생성
   const commonRules = `
@@ -413,7 +538,7 @@ ${tenYearsInfo}
 - 최종 결과물은 점술 해설이 아니라 관계 심리 리포트처럼 읽혀야 합니다.
 - 명반 용어, 별 이름, 궁 이름은 최종 출력에 직접 쓰지 않습니다. 입력 데이터의 근거를 반드시 생활 언어로 번역합니다.
 - 조언, 처방, 훈련법 중심으로 쓰지 않습니다. 먼저 사용자의 실제 성향·끌림·매력·문제 패턴·올해 흐름을 설명합니다.
-- 모든 해석은 user context의 [LOVE_DATA_STRATEGY], [SECTION_REFERENCE_GUIDE], [LOVE_PALACE_DATA], [LOVE_PROBLEM_SIGNALS], [LOVE_TIMING_DATA], [LOVE_STAR_EVIDENCE]만 근거로 사용합니다.
+- 모든 해석은 user message JSON의 chart, dictionaryMatches, timing 데이터만 근거로 사용합니다.
 - 일반적인 연애 조언이나 누구에게나 맞는 문장으로 흐리지 않습니다.
 
 [출력 섹션]
@@ -484,40 +609,43 @@ ${commonRules}`
     themeSpecificContext = `\n[신궁(후천적 가치관) 위치]: ${shenGongPalaceName}궁\n` + luStarPalacesInfo + "\n" + siHuaPalacesInfo;
   }
 
-  const userContext = theme === 'love'
-    ? formatLoveReportContext({
-        lifePalace,
-        spousePalace: extractedStars['夫妻'],
-        fortunePalace: extractedStars['福德'],
-        childrenPalace: extractedStars['子女'],
-        migrationPalace: extractedStars['遷移'],
-        careerPalace: extractedStars['官祿'],
-        friendsPalace: extractedStars['交友'],
-        parentsPalace: extractedStars['父母'],
-        siblingsPalace: extractedStars['兄弟'],
-        liuNianLovePalaces: liuNianThemePalaces,
-        periodicPalacesInfo,
-        knowledgeBase,
-      })
-    : `
-선택한 테마: ${theme}
+  let loveUserMessageJson: ReturnType<typeof buildLoveUserMessageJson> | null = null;
 
-[유저의 기질 및 운세 데이터 (절대 이 용어들을 결과에 직접 노출하지 말 것)]
-- 타고난 본질: ${formatPalaceStars(lifePalace)}
-- 테마별 행동 방식: ${themePalaces.map((p: ExtractedPalace) => `${p.name} 환경: ${formatPalaceStars(p)}`).join(" | ")}
-${themeSpecificContext}
-${periodicPalacesInfo}
+  const genericUserMessageJson = buildGenericReportUserMessageJson({
+    theme,
+    sajuData: saju_data ?? {},
+    extractedStars,
+    lifePalace,
+    themePalaces,
+    knowledgeBase,
+    themeSpecificContext,
+    periodicPalacesInfo,
+  });
+  let userContext = JSON.stringify(genericUserMessageJson);
 
-[지식베이스 (Ground Truth)]
-${Object.entries(knowledgeBase).map(([star, insight]) => `
-별 이름: ${star}
-- 본질적 성향: ${insight.core_trait}
-- 커리어 방향성: ${insight.career_insight}
-- 연애/관계성: ${insight.love_insight}
-- 웰니스/여가: ${insight.wellness_insight}
-- 시기별 조언: ${insight.periodic_insight}
-`).join("\n")}
-`;
+  if (theme === 'love') {
+    loveUserMessageJson = buildLoveUserMessageJson({
+      userInput: {
+        birthDate: saju_data?.date ?? null,
+        birthTime: saju_data?.time ?? null,
+        gender: saju_data?.gender ?? null,
+        location: saju_data?.location ?? null,
+      },
+      extractedStars,
+      dictionaryMatches: {
+        byStar: loveDictionaryEntries.filter((entry) => entry.category === 'star'),
+        byPalace: loveDictionaryEntries.filter((entry) => entry.category === 'palace'),
+        byFormation: loveDictionaryEntries.filter((entry) => entry.category === 'formation'),
+        byLoveTag: loveTagMatches ?? LOVE_EVIDENCE_TAGS.reduce<Record<LoveEvidenceTag, []>>((acc, tag) => {
+          acc[tag] = [];
+          return acc;
+        }, {} as Record<LoveEvidenceTag, []>),
+      },
+      periodicFlowText: periodicPalacesInfo,
+    });
+    userContext = JSON.stringify(loveUserMessageJson);
+  }
+
 
   // 7. OpenAI API 호출
   let parsedContent = null;
@@ -528,7 +656,12 @@ ${Object.entries(knowledgeBase).map(([star, insight]) => `
       try {
         fs.writeFileSync(
           path.join(process.cwd(), ".gemini_mock.log"),
-          JSON.stringify({ systemPrompt, userContext }, null, 2)
+          JSON.stringify({
+            systemPrompt,
+            userContext,
+            genericUserMessageJson,
+            loveUserMessageJson,
+          }, null, 2)
         );
       } catch {
         // ignore
