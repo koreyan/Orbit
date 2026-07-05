@@ -28,7 +28,7 @@ const configFiles = [
 ];
 
 async function migrate() {
-  console.log("Starting Migration to Supabase z_system_configs...");
+  console.log("Starting Migration to Supabase z_love_configs...");
 
   for (const config of configFiles) {
     const filePath = path.join(DATA_DIR, config.filename);
@@ -37,7 +37,7 @@ async function migrate() {
       const jsonData = JSON.parse(fileData);
 
       const { data, error } = await supabase
-        .from('z_system_configs')
+        .from('z_love_configs')
         .upsert(
           {
             id: config.id,

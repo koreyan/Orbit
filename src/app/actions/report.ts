@@ -5,15 +5,10 @@ import * as fs from "fs";
 import * as path from "path";
 import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import type { ExtractedChart, ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
-import {
-  fetchKnowledgeBaseByLoveTags,
-  fetchKnowledgeBaseForLove,
-  fetchKnowledgeBaseForStars,
-} from "@/lib/knowledge-base";
-import { buildLoveUserMessageJson, LOVE_RELEVANT_PALACES } from "@/lib/report-prompts/love-context";
+import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
+import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
 import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prompts/love-data-extractor";
 import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
-import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
@@ -61,33 +56,6 @@ const collectStarNamesFromPalace = (palace?: ExtractedPalace | null): string[] =
 const uniqueTerms = (terms: string[]): string[] => (
   Array.from(new Set(terms.map((term) => term.trim()).filter(Boolean)))
 );
-
-const buildLoveDictionaryTerms = (extractedStars: ExtractedChart) => {
-  const palaces = Object.values(extractedStars);
-  const starTerms = uniqueTerms(palaces.flatMap(collectStarNamesFromPalace));
-  const palaceTerms = uniqueTerms(
-    palaces.flatMap((palace) => {
-      const starNames = collectStarNamesFromPalace(palace);
-      return [
-        palace.name,
-        ...starNames.map((starName) => `${palace.name} ${starName}`),
-      ];
-    })
-  );
-  const formationTerms = uniqueTerms([
-    ...starTerms,
-    ...palaceTerms,
-    "삼방사정",
-    "도화",
-    "화기",
-    "살성",
-    "길성",
-    "홍란",
-    "천희",
-  ]);
-
-  return { starTerms, palaceTerms, formationTerms };
-};
 
 const buildGenericReportUserMessageJson = ({
   theme,
@@ -395,23 +363,6 @@ ${tenYearsInfo}
   // 5. 지식베이스 (Ground Truth) 로드
 
   const knowledgeBase = await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
-  const loveExtractedStars = theme === 'love'
-    ? Object.fromEntries(
-        Object.entries(extractedStars).filter(([key]) => LOVE_RELEVANT_PALACES.has(key))
-      ) as ExtractedChart
-    : null;
-  const loveDictionaryTerms = loveExtractedStars ? buildLoveDictionaryTerms(loveExtractedStars) : null;
-  const loveDictionaryEntries = loveDictionaryTerms
-    ? await fetchKnowledgeBaseForLove(
-        adminClient,
-        loveDictionaryTerms.starTerms,
-        loveDictionaryTerms.palaceTerms,
-        loveDictionaryTerms.formationTerms
-      )
-    : [];
-  const loveTagMatches = theme === 'love'
-    ? await fetchKnowledgeBaseByLoveTags(adminClient, LOVE_EVIDENCE_TAGS, 8)
-    : null;
 
   // 6. 테마별 맞춤형 시스템 프롬프트 생성
   const commonRules = `
@@ -784,10 +735,10 @@ ${commonRules}`
     }
   }
 
-  // 8. 결과 저장
   if (parsedContent) {
     await adminClient.from("reports").update({
       content: parsedContent,
+      prompt_data: JSON.parse(userContext),
       status: "completed",
       generated_at: new Date().toISOString()
     }).eq("id", reportId);

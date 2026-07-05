@@ -1,3 +1,5 @@
+export const maxDuration = 60; // Vercel Serverless Function Timeout 해제
+
 import { redirect } from "next/navigation";
 import { BackButton } from "@/components/ui/back-button";
 import { StarBackground } from "@/components/ui/star-background";

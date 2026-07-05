@@ -118,11 +118,12 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
 
   // 로딩 지연 상태 타이머 (5분 설정)
   const [elapsedTime, setElapsedTime] = useState(0);
-  const isDelayed = elapsedTime >= 300;
+  const isDelayed = elapsedTime >= 60; // 5분에서 60초로 축소
+  const [localError, setLocalError] = useState(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (status === "pending" || status === "generating") {
+    if ((status === "pending" || status === "generating") && !localError) {
       timer = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -130,11 +131,13 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
     return () => {
       if (timer) clearInterval(timer);
     }
-  }, [status]);
+  }, [status, localError]);
 
   // 폴링(Polling) 및 생성 트리거 로직
   useEffect(() => {
     let interval: NodeJS.Timeout;
+
+    if (localError) return;
 
     if (status === "pending") {
       // Vercel Serverless 환경에서 백그라운드 태스크가 조기 종료되는 문제를 방지하기 위해,
@@ -145,6 +148,7 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
           router.refresh();
         }).catch(err => {
           console.error("Report generation error:", err);
+          setLocalError(true);
         });
       }
       
@@ -160,7 +164,7 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
     return () => {
       if (interval) clearInterval(interval);
     }
-  }, [status, reportId, router]);
+  }, [status, reportId, router, localError]);
 
   const [isMakingPublic, setIsMakingPublic] = useState(false);
 
@@ -214,7 +218,7 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
     }
   };
 
-  if (status === "failed") {
+  if (status === "failed" || localError) {
     return (
       <div className="w-full max-w-3xl mx-auto py-32 text-center animate-in fade-in px-4">
         <h2 className="text-2xl font-bold text-red-400 mb-4">별빛의 흐름이 잠시 끊어졌습니다.</h2>

@@ -1,3 +1,5 @@
+export const maxDuration = 60; // Vercel Serverless Function Timeout 해제
+
 import Link from 'next/link';
 import { fetchOrderDetail } from '@/lib/api/admin';
 import { formatKoreanDateTime } from '@/lib/format/korean-date-time';

@@ -12,7 +12,7 @@ export interface LoveConfigs {
 }
 
 export async function loadLoveConfigs(supabase: SupabaseClient): Promise<LoveConfigs> {
-  const { data, error } = await supabase.from('z_system_configs').select('id, config_data').in('id', ['ideal_types', 'relationship_styles', 'charm_assets', 'relationship_problems', 'love_luck']);
+  const { data, error } = await supabase.from('z_love_configs').select('id, config_data').in('id', ['ideal_types', 'relationship_styles', 'charm_assets', 'relationship_problems', 'love_luck']);
   if (error) throw error;
   
   const map = data.reduce((acc, row) => {
