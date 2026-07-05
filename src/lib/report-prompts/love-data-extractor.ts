@@ -1,11 +1,34 @@
 import type { ExtractedChart, ExtractedPalace } from "@/lib/ziwei-extractor";
 
 // JSON 데이터베이스 로드
-import idealTypesDb from "../../../data/normalized/ideal_types.json";
-import relationshipStylesDb from "../../../data/normalized/relationship_styles.json";
-import charmAssetsDb from "../../../data/normalized/charm_assets.json";
-import relationshipProblemsDb from "../../../data/normalized/relationship_problems.json";
-import loveLuckDb from "../../../data/normalized/love_luck.json";
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export interface LoveConfigs {
+  idealTypesDb: any;
+  relationshipStylesDb: any;
+  charmAssetsDb: any;
+  relationshipProblemsDb: any;
+  loveLuckDb: any;
+}
+
+export async function loadLoveConfigs(supabase: SupabaseClient): Promise<LoveConfigs> {
+  const { data, error } = await supabase.from('z_system_configs').select('id, config_data').in('id', ['ideal_types', 'relationship_styles', 'charm_assets', 'relationship_problems', 'love_luck']);
+  if (error) throw error;
+  
+  const map = data.reduce((acc, row) => {
+    acc[row.id] = row.config_data;
+    return acc;
+  }, {} as Record<string, any>);
+
+  return {
+    idealTypesDb: map['ideal_types'] || {},
+    relationshipStylesDb: map['relationship_styles'] || {},
+    charmAssetsDb: map['charm_assets'] || {},
+    relationshipProblemsDb: map['relationship_problems'] || {},
+    loveLuckDb: map['love_luck'] || {},
+  };
+}
+
 import { translatePalace, translateStar, translateSihua, sanitizeTerminology } from "./term-translator";
 
 // 천간 정의
@@ -231,7 +254,8 @@ const hasStar = (palace: ExtractedPalace | undefined, starName: string): boolean
 // ==========================================
 
 /** 1. 이상형 데이터 추출 (idealTypes) */
-function extractIdealTypes(extractedStars: ExtractedChart, birthDate: string | null): IdealTypesMatchResult {
+function extractIdealTypes(configs: LoveConfigs, extractedStars: ExtractedChart, birthDate: string | null): IdealTypesMatchResult {
+  const { idealTypesDb } = configs;
   const spousePalace = extractedStars["夫妻"];
   const careerPalace = extractedStars["官祿"];
 
@@ -344,7 +368,8 @@ function extractIdealTypes(extractedStars: ExtractedChart, birthDate: string | n
 }
 
 /** 2. 연애 성향 데이터 추출 (relationshipStyles) */
-function extractRelationshipStyles(extractedStars: ExtractedChart): RelationshipStylesMatchResult {
+function extractRelationshipStyles(configs: LoveConfigs, extractedStars: ExtractedChart): RelationshipStylesMatchResult {
+  const { relationshipStylesDb, idealTypesDb } = configs;
   const spousePalace = extractedStars["夫妻"];
   let motive: RelationshipMotive | null = null;
   let doubleStarSynthesis: { type: string; text: string } | null = null;
@@ -463,7 +488,8 @@ function extractRelationshipStyles(extractedStars: ExtractedChart): Relationship
 }
 
 /** 3. 매력 자산 데이터 추출 (charmAssets) */
-function extractCharmAssets(extractedStars: ExtractedChart): CharmAssetsMatchResult {
+function extractCharmAssets(configs: LoveConfigs, extractedStars: ExtractedChart): CharmAssetsMatchResult {
+  const { charmAssetsDb } = configs;
   const palacesToCheck = [
     { key: "命宮", label: "명궁" },
     { key: "遷移", label: "천이궁" },
@@ -538,7 +564,8 @@ function extractCharmAssets(extractedStars: ExtractedChart): CharmAssetsMatchRes
 }
 
 /** 4. 연애 문제 데이터 추출 (relationshipProblems) */
-function extractRelationshipProblems(extractedStars: ExtractedChart): RelationshipProblemsMatchResult {
+function extractRelationshipProblems(configs: LoveConfigs, extractedStars: ExtractedChart): RelationshipProblemsMatchResult {
+  const { relationshipProblemsDb } = configs;
   const spousePalace = extractedStars["夫妻"];
   const fortunePalace = extractedStars["福德"];
 
@@ -644,10 +671,11 @@ const PALACE_NAME_TO_LABEL: Record<string, string> = {
 };
 
 /** 5. 애정운 데이터 추출 (loveLuck) */
-function extractLoveLuck(
+function extractLoveLuck(configs: LoveConfigs,
   extractedStars: ExtractedChart,
   liunian: RuntimeLiunianData | null
 ): LoveLuckMatchResult {
+  const { loveLuckDb } = configs;
   let dohwaActivation: DohwaActivationMatch | null = null;
   let blocker: { starName: string; effect: string } | null = null;
   let encounterPath: { pathDescription: string } | null = null;
@@ -1002,16 +1030,17 @@ function translateDatingDatabaseMatches(matches: DatingDatabaseMatches): DatingD
 
 /** 5대 JSON 파일에서 맞춤형 텍스트 일괄 추출 */
 export function extractDatingDatabaseMatches(
+  configs: LoveConfigs,
   extractedStars: ExtractedChart,
   birthDate: string | null,
   liunian: RuntimeLiunianData | null
 ): DatingDatabaseMatches {
   const rawMatches = {
-    idealTypes: extractIdealTypes(extractedStars, birthDate),
-    relationshipStyles: extractRelationshipStyles(extractedStars),
-    charmAssets: extractCharmAssets(extractedStars),
-    relationshipProblems: extractRelationshipProblems(extractedStars),
-    loveLuck: extractLoveLuck(extractedStars, liunian),
+    idealTypes: extractIdealTypes(configs, extractedStars, birthDate),
+    relationshipStyles: extractRelationshipStyles(configs, extractedStars),
+    charmAssets: extractCharmAssets(configs, extractedStars),
+    relationshipProblems: extractRelationshipProblems(configs, extractedStars),
+    loveLuck: extractLoveLuck(configs, extractedStars, liunian),
   };
   return translateDatingDatabaseMatches(rawMatches);
 }

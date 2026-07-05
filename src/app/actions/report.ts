@@ -11,7 +11,7 @@ import {
   fetchKnowledgeBaseForStars,
 } from "@/lib/knowledge-base";
 import { buildLoveUserMessageJson, LOVE_RELEVANT_PALACES } from "@/lib/report-prompts/love-context";
-import { extractDatingDatabaseMatches } from "@/lib/report-prompts/love-data-extractor";
+import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prompts/love-data-extractor";
 import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
 import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
@@ -657,7 +657,9 @@ ${commonRules}`
   let userContext = JSON.stringify(genericUserMessageJson);
 
   if (theme === 'love') {
+    const configs = await loadLoveConfigs(adminClient);
     const datingDatabaseMatches = extractDatingDatabaseMatches(
+      configs,
       extractedStars ?? {},
       saju_data?.date ?? null,
       runtimeLiunian
