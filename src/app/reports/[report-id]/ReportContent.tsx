@@ -139,7 +139,7 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
 
     if (localError) return;
 
-    if (status === "pending") {
+    if (status === "pending" || status === "generating") {
       // Vercel Serverless 환경에서 백그라운드 태스크가 조기 종료되는 문제를 방지하기 위해,
       // 클라이언트(브라우저)에서 명시적으로 Server Action을 호출하여 HTTP 연결을 유지시킵니다.
       if (!hasTriggeredRef.current) {
@@ -152,10 +152,6 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
         });
       }
       
-      interval = setInterval(() => {
-        router.refresh();
-      }, 3000);
-    } else if (status === "generating") {
       interval = setInterval(() => {
         router.refresh();
       }, 3000);

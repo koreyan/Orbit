@@ -35,16 +35,7 @@ interface RuntimeLiunianData {
 const asRuntimeChartData = (value: unknown): RuntimeChartData => value as RuntimeChartData;
 const asRuntimeLiunianData = (value: unknown): RuntimeLiunianData => value as RuntimeLiunianData;
 
-const LOVE_EVIDENCE_TAGS: LoveEvidenceTag[] = [
-  "attraction_pattern",
-  "compatible_partner",
-  "conflict_pattern",
-  "solo_blocker",
-  "charm_asset",
-  "encounter_path",
-  "timing_signal",
-  "action_guide",
-];
+
 
 const collectStarNamesFromPalace = (palace?: ExtractedPalace | null): string[] => {
   if (!palace) return [];
@@ -119,10 +110,13 @@ const buildGenericReportUserMessageJson = ({
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
 
+  console.log("[OBIT DEBUG 1] generateReportAction started. orderId:", orderId);
+
   const { createClient: createServerClient } = await import('@/lib/supabase/server');
   const supabase = await createServerClient();
   const { data: userData } = await supabase.auth.getUser();
   const currentUserId = userData?.user?.id;
+  console.log("[OBIT DEBUG 2] Auth check complete. currentUserId:", currentUserId);
 
   const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
   const adminClient = createSupabaseClient(
@@ -140,6 +134,7 @@ export async function generateReportAction(orderId: string) {
   if (orderError || !order) {
     throw new Error("주문 정보를 찾을 수 없습니다.");
   }
+  console.log("[OBIT DEBUG 3] Order fetched. Theme:", order.theme);
 
   // 관리자 여부 확인
   let isAdmin = false;
@@ -191,6 +186,7 @@ export async function generateReportAction(orderId: string) {
   } else {
     await adminClient.from("reports").update({ status: "generating" }).eq("id", reportId);
   }
+  console.log("[OBIT DEBUG 4] Report status set to generating. ReportId:", reportId);
 
   // 3. 테마에 따른 궁 필터링
   const { lifePalace, themePalaces } = filterThemePalaces(extractedStars, theme);
@@ -359,10 +355,11 @@ ${tenYearsInfo}
       console.warn('사화 추출 실패:', e);
     }
   }
+  console.log("[OBIT DEBUG 5] Liunian & periodic flow calculated.");
 
-  // 5. 지식베이스 (Ground Truth) 로드
-
+  console.log("[OBIT DEBUG 6] Fetching knowledgeBase for stars...");
   const knowledgeBase = await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
+  console.log("[OBIT DEBUG 7] knowledgeBase loaded. Size:", Object.keys(knowledgeBase).length);
 
   // 6. 테마별 맞춤형 시스템 프롬프트 생성
   const commonRules = `
@@ -607,14 +604,18 @@ ${commonRules}`
   });
   let userContext = JSON.stringify(genericUserMessageJson);
 
+  console.log("[OBIT DEBUG 8] Theme-specific config check. Theme:", theme);
   if (theme === 'love') {
+    console.log("[OBIT DEBUG 8-1] Loading love configs from DB...");
     const configs = await loadLoveConfigs(adminClient);
+    console.log("[OBIT DEBUG 8-2] love configs loaded. Extracting matches...");
     const datingDatabaseMatches = extractDatingDatabaseMatches(
       configs,
       extractedStars ?? {},
       saju_data?.date ?? null,
       runtimeLiunian
     );
+    console.log("[OBIT DEBUG 8-3] Matches extracted. Building prompt JSON...");
 
     loveUserMessageJson = buildLoveUserMessageJson({
       userInput: {
@@ -628,6 +629,7 @@ ${commonRules}`
       datingDatabaseMatches,
     });
     userContext = JSON.stringify(loveUserMessageJson);
+    console.log("[OBIT DEBUG 9] Love prompt JSON built.");
   }
 
 
@@ -685,7 +687,7 @@ ${commonRules}`
         }
       }
 
-      console.log(`OpenAI API 호출 시도...`);
+      console.log("[OBIT DEBUG 10] Calling OpenAI API (gpt-4o-mini)...");
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
       const response = await openai.chat.completions.create({
@@ -697,6 +699,7 @@ ${commonRules}`
       });
 
       const responseText = response.choices[0].message.content || "";
+      console.log("[OBIT DEBUG 11] OpenAI response received. Length:", responseText.length);
 
       if (theme === 'career' || theme === 'love') {
         let cleanedMarkdown = responseText.trim();
@@ -736,12 +739,17 @@ ${commonRules}`
   }
 
   if (parsedContent) {
-    await adminClient.from("reports").update({
+    const { data: updateData, error: updateError } = await adminClient.from("reports").update({
       content: parsedContent,
-      prompt_data: JSON.parse(userContext),
       status: "completed",
       generated_at: new Date().toISOString()
-    }).eq("id", reportId);
+    }).eq("id", reportId).select();
+    
+    if (updateError) {
+      console.error("[OBIT DEBUG 12 ERROR] DB update failed:", updateError);
+    } else {
+      console.log("[OBIT DEBUG 12] DB update succeeded. Affected rows:", updateData?.length);
+    }
 
     // 텔레그램 알림: 리포트 생성 성공
     await sendTelegramNotification(`✨ <b>[리포트 생성 완료]</b>\n주문번호: <code>${orderId}</code>\nAI가 성공적으로 별빛 이야기를 해독했습니다!`);
