@@ -10,7 +10,9 @@ import {
   fetchKnowledgeBaseForLove,
   fetchKnowledgeBaseForStars,
 } from "@/lib/knowledge-base";
-import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
+import { buildLoveUserMessageJson, LOVE_RELEVANT_PALACES } from "@/lib/report-prompts/love-context";
+import { extractDatingDatabaseMatches } from "@/lib/report-prompts/love-data-extractor";
+import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
 import type { LoveEvidenceTag } from "@/lib/report-prompts/types";
 import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -26,10 +28,13 @@ interface RuntimeChartData {
 }
 
 interface RuntimeLiunianData {
+  year?: number;
+  age?: number;
   daxianPalaceName: string;
   daxianAgeStart: number;
   daxianAgeEnd: number;
   palaces: Record<string, string>;
+  liuyue: { month: number; mingGongZhi: string; natalPalaceName: string }[];
 }
 
 const asRuntimeChartData = (value: unknown): RuntimeChartData => value as RuntimeChartData;
@@ -117,7 +122,7 @@ const buildGenericReportUserMessageJson = ({
   userInput: {
     birthDate: typeof sajuData.date === 'string' ? sajuData.date : null,
     birthTime: typeof sajuData.time === 'string' ? sajuData.time : null,
-    gender: typeof sajuData.gender === 'string' ? sajuData.gender : null,
+    gender: typeof sajuData.gender === 'string' ? (sajuData.gender === 'M' ? '남성' : sajuData.gender === 'F' ? '여성' : sajuData.gender) : null,
     location: typeof sajuData.location === 'string' ? sajuData.location : null,
   },
   chart: {
@@ -227,6 +232,9 @@ export async function generateReportAction(orderId: string) {
   const daHanThemePalaces: ExtractedPalace[] = [];
   const liuNianThemePalaces: ExtractedPalace[] = [];
   let shenGongPalaceName = "알 수 없음";
+  let runtimeLiunian: RuntimeLiunianData | null = null;
+  const tenYearsLiunianList: RuntimeLiunianData[] = [];
+  const palaceZhiMap: Record<string, string> = {};
 
   try {
     const { date, time, gender } = saju_data;
@@ -236,8 +244,12 @@ export async function generateReportAction(orderId: string) {
       const isMale = gender === "M";
       const generatedChart = createChart(y, m, d, h, min, isMale);
       const chartData = asRuntimeChartData(generatedChart);
+      Object.entries(chartData.palaces).forEach(([key, p]) => {
+        palaceZhiMap[key] = p.zhi;
+      });
       const currentYear = new Date().getFullYear();
       const liunian = asRuntimeLiunianData(calculateLiunian(generatedChart, currentYear));
+      runtimeLiunian = liunian;
 
       const shengongTranslation: Record<string, string> = {
         '命宮': '명궁',
@@ -293,6 +305,9 @@ export async function generateReportAction(orderId: string) {
       for (let i = 0; i < 10; i++) {
         const year = currentYear + i;
         const yearlyLiunian = asRuntimeLiunianData(calculateLiunian(generatedChart, year));
+        yearlyLiunian.year = year;
+        yearlyLiunian.age = year - y;
+        tenYearsLiunianList.push(yearlyLiunian);
 
         // 해당 연도의 유년 명궁 찾기
         const liunianMingZhi = yearlyLiunian.palaces['命宮'];
@@ -380,7 +395,12 @@ ${tenYearsInfo}
   // 5. 지식베이스 (Ground Truth) 로드
 
   const knowledgeBase = await fetchKnowledgeBaseForStars(adminClient, Array.from(starsToAnalyze));
-  const loveDictionaryTerms = theme === 'love' ? buildLoveDictionaryTerms(extractedStars) : null;
+  const loveExtractedStars = theme === 'love'
+    ? Object.fromEntries(
+        Object.entries(extractedStars).filter(([key]) => LOVE_RELEVANT_PALACES.has(key))
+      ) as ExtractedChart
+    : null;
+  const loveDictionaryTerms = loveExtractedStars ? buildLoveDictionaryTerms(loveExtractedStars) : null;
   const loveDictionaryEntries = loveDictionaryTerms
     ? await fetchKnowledgeBaseForLove(
         adminClient,
@@ -532,59 +552,72 @@ ${tenYearsInfo}
 `,
 
     love: `
-당신은 현대적이고 트렌디한 관계 심리 분석가이자 매력 컨설턴트입니다. 유저의 자미두수 명반 데이터를 기반으로, 싱글 사용자가 “나는 연애에서 어떻게 반응하고, 어떤 사람에게 끌리며, 어떤 매력으로 호감을 만들고, 어디서 반복적으로 꼬이는지”를 이해하도록 돕는 자기이해형 리포트를 작성합니다.
+당신은 현대적이고 친근한 연애 코치이자 관계 심리 전문가입니다. 제공되는 user message JSON 내의 \`datingDatabaseMatches\` 데이터(idealTypes, relationshipStyles, charmAssets, relationshipProblems, loveLuck)에 명시된 한글 묘사 문장들과 키워드 조각들을 **그대로 가져와 다정다감하고 친근한 존댓말(~해요, ~답니다, ~하죠, ~해보세요)로 녹여내어** 리포트를 작성합니다.
 
-[핵심 운영 원칙]
-- 최종 결과물은 점술 해설이 아니라 관계 심리 리포트처럼 읽혀야 합니다.
-- 명반 용어, 별 이름, 궁 이름 등 자미두수 전문 용어를 적극적으로 사용하여 분석의 근거와 전문성을 강조하세요.
-- 조언, 처방, 훈련법 중심으로 쓰지 않습니다. 먼저 사용자의 실제 성향·끌림·매력·문제 패턴·올해 흐름을 설명합니다.
-- 모든 해석은 user message JSON의 chart, dictionaryMatches, timing 데이터만 근거로 사용합니다.
+[핵심 작성 원칙]
+- 최종 결과물은 단순한 점술 해설이 아니라 정밀한 관계 심리 리포트처럼 읽혀야 합니다.
+- 입력 데이터에 "별칭(원래이름)" 형태로 전달된 용어(예: "연애와 결혼의 자리(부처궁)", "세련된 매력의 별(염정)")를 사용할 때는 반드시 그 "별칭(원래이름)" 형태를 그대로 유지하여 출력하세요. 별칭만 쓰거나 원래이름만 쓰지 말고, 항상 병기하세요.
+- **[서식 제한]**: 별칭이나 별 이름(예: 세련된 매력의 별(염정))을 출력할 때 양옆에 마크다운 볼드 기호(\`**\`)를 절대 사용하지 말고 순수 텍스트로만 출력하세요. (예: \`**세련된 매력의 별(염정)**\` (X) -> \`세련된 매력의 별(염정)\` (O))
+- 설명을 할 때는 "어떤 자리에 어떤 별이 있기 때문에 이러한 성향이 나타난다"는 식으로 구체적 근거를 제시하며 서술합니다.
+- 임의로 텍스트의 뜻을 왜곡하여 지나치게 긍정적이거나 부정적으로 창작(Hallucination)하지 마세요. 반드시 \`datingDatabaseMatches\`에 기술된 현실적이고 날카로운 심리 기전과 문제점들을 뼈 때리면서도 다정한 언어로 풀어내야 합니다.
 - 일반적인 연애 조언이나 누구에게나 맞는 문장으로 흐리지 않습니다.
 
 [출력 섹션]
-아래 5개 섹션 제목과 순서를 그대로 유지합니다.
+아래 5개 섹션 제목과 순서를 그대로 유지하며, 각 섹션별로 2~4문단 분량으로 마크다운 양식으로 작성해 주세요.
 
-1. 연애 한 줄 정의
-2. 내가 끌리는 사람 유형
-3. 나의 매력 자산
-4. 연애 관점으로 본 나의 문제
-5. 애정운
+1. 나는 어떤 사람을 좋아하는가
+2. 나는 연애 할 때 어떤 성향인가
+3. 나의 매력 자산은 무엇인가
+4. 연애 관점에서 나의 문제란 무엇인가
+5. 앞으로 다가올 연애 기회
 
 [섹션별 작성 기준]
-1. 연애 한 줄 정의
-- 명궁, 부처궁, 복덕궁, 자녀궁을 함께 읽습니다.
-- 기본 반응, 사랑에 빠졌을 때의 모습, 관계의 첫인상, 가까워졌을 때의 분위기를 한 문장 정의 후 2~3문단으로 풀이합니다.
+1. 나는 어떤 사람을 좋아하는가
+- \`idealTypes\`의 \`spousePalaceStars\`, \`polarityContradictions\`, \`palaceContradictions\`, \`gongGungRules\`, \`birthStemMatch\` 조언들을 융합하여 "자꾸 눈길이 가고 마음이 먼저 끌리는 이상형 특징"을 입체적으로 기술합니다. 편안한 관계와 끌리는 관계가 다르면 그 차이를 분명히 설명합니다.
 
-2. 내가 끌리는 사람 유형
-- 부처궁을 최우선으로 보고, 관록궁과 부처궁 삼방사정(복덕궁/천이궁/관록궁)을 보조로 봅니다.
-- 편안한 관계와 끌리는 관계가 다르면 그 차이를 분명히 설명합니다.
-- 상대 타입은 직업명보다 관계에서 체감되는 태도와 분위기로 씁니다.
+2. 나는 연애 할 때 어떤 성향인가
+- \`relationshipStyles\`의 기본 성향(\`motive\`) 및 쌍성 기조(\`doubleStarSynthesis\`), 길성 보강(\`gilSeongModifiers\`), 사화 효과(\`sihuaEffects\`) 내용을 빠짐없이 녹여 유저가 연애할 때 나타나는 심리 기질과 첫인상/본모습을 풀이합니다.
+- \`gilSeongModifiers\` 배열에 텍스트가 있으면, 길성이 유저의 연애 성향을 어떻게 보강·완화하는지 구체적으로 서술합니다.
+- \`sihuaEffects\` 배열에 항목이 있으면, 해당 별에 붙은 사화(화록/화권/화과/화기)가 연애 성향에 미치는 구체적 영향을 반드시 언급합니다. (예: 화록이 붙으면 연애에서 그 별의 기질이 긍정적으로 확장, 화기가 붙으면 해당 기질에서 결핍·불안이 발생)
+- \`expectations\` 데이터를 활용하여 유저가 연인에게 무의식적으로 기대하는 바를 풀어냅니다.
 
-3. 나의 매력 자산
-- 명궁은 첫인상, 자녀궁은 본능적 매력과 플러팅, 복덕궁은 정서적 매력, 천이궁은 밖에서 보이는 이미지로 사용합니다.
-- 염정/천량/탐랑/파군/문곡/홍란 신호가 있으면 매력 성질별 세부 포인트로 반영합니다.
-- 성적 끌림은 안정감·따뜻함으로 뭉개지 말고, 시선·표정·말투·거리감·분위기·몸의 사용처럼 체감 가능한 매력으로 설명합니다.
+3. 나의 매력 자산은 무엇인가
+- \`charmAssets\`의 데이터를 기반으로 하되, 단순히 각 별의 매력을 나열하거나 열거하는 방식(예: '자미는 이렇고 천상은 이렇다')을 절대 피하세요. 제공된 문장들을 바탕으로 **이 유저의 실제 외양(눈빛, 표정, 스타일 등)과 구체적인 행동 패턴(대화할 때의 제스처, 흘리는 시선, 연인과 함께 있을 때의 텐션 등)을 상상하여 한 편의 이야기(스토리)처럼 흘러가듯 생생하게 풀어내어 묘사**해 주세요. 첫인상(명궁), 대외적 이미지(천이궁), 본능적인 스킨십/플러팅 스타일(자녀궁), 은근한 정서적 매력(복덕궁)의 매력 포인트를 각각 분리된 세부 단락으로 나누어 구체적이고 묘사 중심으로 흥미진진하게 설명해 주세요.
 
-4. 연애 관점으로 본 나의 문제
-- 부처궁 약함 기준, 화기, 살성, 복덕궁, 인간관계 패턴을 함께 봅니다.
-- 살성 1~2개나 화기 1개만으로 나쁘다고 단정하지 않습니다.
-- 감정 과몰입, 확인 욕구, 집착, 관계 리듬 문제, 외부 인연 꼬임, 반복되는 패턴을 같은 성향의 과발현으로 설명합니다.
+4. 연애 관점에서 나의 문제란 무엇인가
+- \`relationshipProblems\`의 살성 템포 문제(\`salSeongTempo\`), 공망 효과(\`gongMangEffect\`), 주성화기 결핍(\`hwaGiDeficiency\`), 살성-화기 시너지(\`synergies\`), 비화 외풍(\`flyOutProblems\`)을 활용하여 관계가 반복적으로 꼬이거나 힘들어지는 지점을 따끔하면서도 다정하게 짚어줍니다.
+- 특히 **\`loveLuck.unconsciousNeeds\`(복덕궁 기반 무의식 결핍) 데이터를 적극 반영**하여, 유저가 무의식적으로 지니고 있는 \"내면의 어린아이(결핍 유형 및 무의식적 상처)\"가 관계에서 어떤 집착, 불안, 인정 욕구, 단절 성향 등으로 투사되는지 심층 분석하고, 이를 극복하기 위한 다정한 심리 솔루션을 함께 제시해 주세요.
 
-5. 애정운
-- 부처궁, 소한, 유년, 홍란, 천희, 도화, 중첩궁, 살성/화기 신호를 함께 봅니다.
-- 예언처럼 단정하지 말고 올해 어떤 감정 주제가 활성화되고, 어느 환경에서 인연 접점이 늘고, 어떤 신호에서 관계가 꼬이는지 씁니다.
-- 월별 데이터가 부족하면 억지로 월별 표를 만들지 말고, 제공된 유년/대한 흐름 범위 안에서만 서술합니다.
+5. 앞으로 다가올 연애 기회
+아래의 2개 하위 서브섹션 제목을 마크다운 헤더(###)로 선언하여 각 단락을 명확히 구분해 작성해 주세요.
+
+### 5-1. 올해(\${currentYear}년) 연애운
+- \`loveLuck\`의 올해 도화 발현(\`dohwaActivation\`), 방해 요소(\`blockers\`), 경사 조건(\`pregnancyCelebration\`)을 올해(\${currentYear}년)의 연애운 큰 기조로 먼저 간단히 소개합니다. **(주의: 절대로 과거 연도인 2023년 등을 언급하지 마세요. 현재 연도는 \${currentYear}년입니다.)**
+- 이어서 **\`monthlyFlow\` 배열에 포함된 모든 월의 데이터를 표 대신 아래의 개별 박스(인용구 \`>\` 블록) 형식으로 단 하나도 빠뜨리지 말고 전부 출력**해 주세요. 분량이 많다고 해서 임의로 특정 월을 건너뛰거나 요약하는 것을 절대 금지합니다.
+- **[경고 - 실제 월번호 출력 및 왜곡 금지]**: 반드시 전달된 JSON 데이터에 있는 **모든 월(예: \${new Date().getMonth() + 1}월부터 12월까지 하나도 빠짐없이)**에 대해 각각의 개별 박스 카드를 1:1 매칭하여 출력해야 합니다. 첫 번째 항목이라고 해서 임의로 1월로 변환하거나, 데이터가 부족(null)하다고 특정 달(예: 7월, 11월, 12월 등)을 빼먹는 행위를 절대 금지합니다.
+- **[중요 - 데이터가 null일 때의 처리]**: 만약 특정 월의 \`dohwaActivation\`, \`blocker\`, \`encounterPath\` 데이터가 \`null\`이거나 부족하더라도 **절대 해당 월을 건너뛰지 마세요**. 대신 해당 월의 기본 궁위(\`palaceLabel\`)와 배정된 별(\`stars\`)의 기운을 바탕으로 "무난하고 평탄한 연애운" 또는 "연애보다는 자기 관리에 집중하기 좋은 시기" 등으로 자연스럽게 내용을 창작하여 반드시 박스를 채워야 합니다.
+- **[핵심 작성 지침 - 상세화]**: 각 항목은 절대 흐리멍덩하거나 짧은 요약으로 때우지 말고 아래 지침에 맞게 아주 구체적으로 채워야 합니다:
+  1. **만남 확률 & 기류**: 도화성 활성화 강도와 살성/방해 요소를 융합하여 그 달의 만남 강도와 기류(예: 번개같이 불탔다가 식음, 썸 지연 등) 진단. 데이터가 없으면 평탄한 시기로 해석.
+  2. **나의 매력 어필 포인트**: 유저의 매력 자산(\`charmAssets\`)과 도화성을 결합하여 그 달에 상대의 마음을 흔들 수 있는 **외적 스타일, 제스처, 말투 및 행동 팁** 서술.
+  3. **구체적인 만남 경로 및 장소**: 만남 경로 데이터와 중첩 궁위의 의미(예: 교우궁 = 친구 모임, 천이궁 = 여행 등)를 매치하여 **어떤 씬(Scene)에서 인연이 닿는지** 묘사. 데이터가 없으면 일상적인 장소로 해석.
+
+**[박스 작성 템플릿(반드시 이 형식으로 출력할 것)]**:
+> **{실제 월}월**
+> * **만남 확률 & 기류**: (만남의 가능성과 연애 기류 진단)
+> * **나의 매력 어필 포인트**: (그 달에 뽐내야 할 구체적 매력 스타일 및 플러팅 행동 팁)
+> * **만남 경로**: (인연을 마주하게 될 구체적 장소 및 만남의 경로 서술)
+
+### 5-2. 연애 팁 (개운 처방전)
+- \`loveLuck.directionGuide\` 데이터를 바탕으로 올해 좋은 인연의 에너지가 강하게 맺히는 구체적인 **인연의 방위**, 매력도를 자극하는 **럭키 아이템**, 그리고 그 방위로 향하는 실천적인 **행동 지침(가이드라인)**을 흥미롭고 실용적인 처방전 형태로 다정하게 마무리해 주세요. 만약 데이터가 존재하지 않는다면 이 5-2 서브섹션은 완전히 생략합니다.
 
 [문체]
-- 현대적이고 직관적인 한국어로 씁니다.
+- 전체 리포트는 **"친근하고 다정다감한 존댓말 말투(~해요, ~랍니다, ~죠, ~해보세요)"**로 작성합니다. 지나치게 딱딱한 문체가 아닌, 따뜻하고 부드럽게 감정을 보듬어주는 어조를 유지해 주세요.
 - “당신은 원래 이런 사람”이 아니라 “연애 상황에서 이런 반응이 드러난다”로 씁니다.
 - 추상적인 미사여구 대신 실제 관계에서 체감되는 반응과 분위기로 설명합니다.
-- 각 섹션은 2~4문단으로 작성합니다.
 
 [금지]
 - JSON으로 출력하지 않습니다.
-- 코드펜스와 표를 쓰지 않습니다.
-- 전문 용어(명궁, 부처궁, 화기, 살성, 도화 등)와 별 이름을 적극적으로 사용하여 명리학적 근거를 명확히 밝힙니다.
+- 코드펜스를 쓰지 않습니다.
 - “좋은 사람을 만나세요”, “이렇게 행동하세요” 같은 일반 조언으로 끝내지 않습니다.
 
 출력은 마크다운 본문만 작성합니다.
@@ -624,24 +657,22 @@ ${commonRules}`
   let userContext = JSON.stringify(genericUserMessageJson);
 
   if (theme === 'love') {
+    const datingDatabaseMatches = extractDatingDatabaseMatches(
+      extractedStars ?? {},
+      saju_data?.date ?? null,
+      runtimeLiunian
+    );
+
     loveUserMessageJson = buildLoveUserMessageJson({
       userInput: {
         birthDate: saju_data?.date ?? null,
         birthTime: saju_data?.time ?? null,
-        gender: saju_data?.gender ?? null,
+        gender: saju_data?.gender === 'M' ? '남성' : (saju_data?.gender === 'F' ? '여성' : saju_data?.gender ?? null),
         location: saju_data?.location ?? null,
       },
-      extractedStars,
-      dictionaryMatches: {
-        byStar: loveDictionaryEntries.filter((entry) => entry.category === 'star'),
-        byPalace: loveDictionaryEntries.filter((entry) => entry.category === 'palace'),
-        byFormation: loveDictionaryEntries.filter((entry) => entry.category === 'formation'),
-        byLoveTag: loveTagMatches ?? LOVE_EVIDENCE_TAGS.reduce<Record<LoveEvidenceTag, []>>((acc, tag) => {
-          acc[tag] = [];
-          return acc;
-        }, {} as Record<LoveEvidenceTag, []>),
-      },
+      extractedStars: extractedStars ?? {},
       periodicFlowText: periodicPalacesInfo,
+      datingDatabaseMatches,
     });
     userContext = JSON.stringify(loveUserMessageJson);
   }
@@ -723,6 +754,10 @@ ${commonRules}`
         }
         if (cleanedMarkdown.endsWith("```")) {
           cleanedMarkdown = cleanedMarkdown.substring(0, cleanedMarkdown.length - "```".length).trim();
+        }
+        // 연애 테마: 후처리로 누출된 전문용어를 병기 형태로 치환
+        if (theme === 'love') {
+          cleanedMarkdown = sanitizeTerminology(cleanedMarkdown);
         }
         parsedContent = { markdown: cleanedMarkdown };
       } else {

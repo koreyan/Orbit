@@ -153,14 +153,14 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
 
     const logData = JSON.parse(fs.readFileSync(MOCK_LOG_PATH, 'utf-8'));
     
-    expect(logData.systemPrompt).toContain('연애 한 줄 정의');
-    expect(logData.systemPrompt).toContain('내가 끌리는 사람 유형');
-    expect(logData.systemPrompt).toContain('나의 매력 자산');
-    expect(logData.systemPrompt).toContain('연애 관점으로 본 나의 문제');
-    expect(logData.systemPrompt).toContain('애정운');
-    expect(logData.systemPrompt).toContain('조언, 처방, 훈련법 중심으로 쓰지 않습니다');
-    expect(logData.systemPrompt).toContain('별 이름, 궁 이름은 최종 출력에 직접 쓰지 않습니다');
-    expect(logData.systemPrompt).toContain('생활 언어로 번역합니다');
+    expect(logData.systemPrompt).toContain('나는 어떤 사람을 좋아하는가');
+    expect(logData.systemPrompt).toContain('나는 연애 할 때 어떤 성향인가');
+    expect(logData.systemPrompt).toContain('나의 매력 자산은 무엇인가');
+    expect(logData.systemPrompt).toContain('연애 관점에서 나의 문제란 무엇인가');
+    expect(logData.systemPrompt).toContain('앞으로 다가올 연애 기회');
+    expect(logData.systemPrompt).toContain('전문 명반 용어');
+    expect(logData.systemPrompt).toContain('별 이름');
+    expect(logData.systemPrompt).toContain('datingDatabaseMatches');
     expect(logData.systemPrompt).not.toContain('LOVE_ADVICE_RULES');
     expect(logData.systemPrompt).not.toContain('연애 조언 생성 파이프라인');
     expect(logData.systemPrompt).not.toContain('조언 후처리');
@@ -179,13 +179,13 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.loveUserMessageJson.chart.source).toBe('orrery');
     expect(logData.loveUserMessageJson.chart.palaces).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: '명궁', role: 'life' }),
-        expect.objectContaining({ label: '부처궁', role: 'spouse' }),
-        expect.objectContaining({ label: '복덕궁', role: 'fortune' }),
-        expect.objectContaining({ label: '자녀궁', role: 'children' })
+        expect.objectContaining({ label: '타고난 성격의 자리(명궁)', role: 'life' }),
+        expect.objectContaining({ label: '연애와 결혼의 자리(부처궁)', role: 'spouse' }),
+        expect.objectContaining({ label: '마음의 안식처(복덕궁)', role: 'fortune' }),
+        expect.objectContaining({ label: '본능과 스킨십의 자리(자녀궁)', role: 'children' })
       ])
     );
-    expect(logData.loveUserMessageJson.dictionaryMatches.byLoveTag).toHaveProperty('charm_asset');
+    expect(logData.loveUserMessageJson).toHaveProperty('datingDatabaseMatches');
     expect(logData.userContext).toBe(JSON.stringify(logData.loveUserMessageJson));
     expect(logData.userContext).not.toContain('[LOVE_PALACE_DATA]');
     expect(logData.userContext).not.toContain('[LOVE_STAR_EVIDENCE]');
