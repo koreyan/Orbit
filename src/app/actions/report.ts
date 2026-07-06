@@ -264,35 +264,44 @@ export async function generateReportAction(orderId: string) {
         }
       });
 
-      // 10년 치 유년/대한 흐름 분석
-      let tenYearsInfo = "";
-      for (let i = 0; i < 10; i++) {
-        const year = currentYear + i;
-        const yearlyLiunian = asRuntimeLiunianData(calculateLiunian(generatedChart, year));
-        yearlyLiunian.year = year;
-        yearlyLiunian.age = year - y;
-        tenYearsLiunianList.push(yearlyLiunian);
-
-        // 해당 연도의 유년 명궁 찾기
-        const liunianMingZhi = yearlyLiunian.palaces['命宮'];
-        let mingPalaceInfo = "데이터 없음";
-        if (liunianMingZhi) {
-          const matchingEntry = Object.entries(chartData.palaces).find(([, palace]) => palace.zhi === liunianMingZhi);
-          if (matchingEntry) {
-            const mingPalace = extractedStars[matchingEntry[0]];
-            if (mingPalace) {
-              mingPalaceInfo = formatPalaceStars(mingPalace);
-              daHanThemePalaces.push(mingPalace);
-            }
+      // 올해(currentYear)의 연도 단위 운세 요약
+      const yearlyLiunian = asRuntimeLiunianData(calculateLiunian(generatedChart, currentYear));
+      
+      const liunianMingZhi = yearlyLiunian.palaces['命宮'];
+      let mingPalaceInfo = "데이터 없음";
+      if (liunianMingZhi) {
+        const matchingEntry = Object.entries(chartData.palaces).find(([, palace]) => palace.zhi === liunianMingZhi);
+        if (matchingEntry) {
+          const mingPalace = extractedStars[matchingEntry[0]];
+          if (mingPalace) {
+            mingPalaceInfo = formatPalaceStars(mingPalace);
+            daHanThemePalaces.push(mingPalace);
           }
         }
-
-        tenYearsInfo += `- ${year}년 (만 ${year - y}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 해당 연도의 중심 에너지: ${mingPalaceInfo}\n`;
       }
 
+      const yearlyInfo = `- ${currentYear}년 전체 (만 ${currentYear - y}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 올해의 중심 에너지: ${mingPalaceInfo}\n`;
+
+      // 현재 월부터 12월까지의 월별 운세 상세 분석
+      const currentMonth = new Date().getMonth() + 1;
+      const filteredMonths = yearlyLiunian.liuyue.filter((ly) => ly.month >= currentMonth);
+      
+      let monthlyInfo = "";
+      filteredMonths.forEach((ly) => {
+        const natalPalace = extractedStars[ly.natalPalaceName];
+        if (natalPalace) {
+          daHanThemePalaces.push(natalPalace); // 월별 분석 궁위도 starsToAnalyze에 포함되도록 추가
+          const palaceLabel = natalPalace.name;
+          const palaceStarsInfo = formatPalaceStars(natalPalace);
+          monthlyInfo += `  * ${ly.month}월: [${palaceLabel}] ${palaceStarsInfo}\n`;
+        }
+      });
+
       periodicPalacesInfo = `
-[앞으로 10년간의 운세 흐름 데이터]
-${tenYearsInfo}
+[올해(${currentYear}년)의 운세 흐름 데이터]
+${yearlyInfo}
+[월별 상세 운세 흐름 (현재 월 ~ 12월)]
+${monthlyInfo}
 `;
     }
   } catch (error) {

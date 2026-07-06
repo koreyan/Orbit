@@ -193,6 +193,7 @@ Gemini AI 기반의 분석 결과 리포트 생성을 담당합니다.
       - **[데이터 추출 및 매핑 고도화]**: `love-data-extractor.ts`를 신설하여 길성/살성/사화 등의 데이터를 정밀하게 가공하여 제공합니다.
       - **[할루시네이션(환각) 방어 로직]**: LLM(gpt-4o-mini)의 지식 컷오프(2023년) 한계로 인해 운세 시기를 2023년으로 착각하는 문제를 막기 위해, 서버에서 파악한 **현재 연도(`currentYear`)를 프롬프트에 동적 주입**하여 과거 연도 출력을 원천 차단합니다.
       - **[월별 데이터 누락 방지]**: `monthlyFlow` 데이터 생성 시 특정 월(null 값 존재 월 등)을 AI가 임의로 스킵하는 것을 막기 위해, **시작 월(`new Date().getMonth() + 1`)을 프롬프트에 동적으로 선언**하고 데이터가 비어있어도 무난한 평탄기운으로 창작해 채우도록 강제 예외 처리 지침을 적용했습니다.
+      - **[1개년 월별 운세 흐름 전환]**: 기존의 앞으로 10년간의 운세 데이터(`timing`) 대신, 유저가 올해 및 현재 월부터 12월까지의 디테일한 흐름을 효과적으로 볼 수 있도록 **1개년 전체 운세 정보 및 현재 월부터 12월까지의 월별 상세 운세 흐름** 형식으로 `periodicFlowText` 데이터의 형식을 전환했습니다.
     - 여가/웰니스 프롬프트: 라이프스타일 큐레이터 & 멘탈케어 전문가 역할. 질액궁 기반 육체적 에너지 관리 + 복덕궁 기반 맞춤형 취미/여가 큐레이션.
   - **마크다운 렌더러 도입 및 코드 펜스 예외 처리 (디자인 복구)**: 기존의 JSON 단일 필드 파싱 렌더링 방식에서 탈피하여 ReactMarkdown과 remarkGfm을 기반으로 한 통짜 마크다운 렌더링을 적용했습니다. AI의 백틱 코드 펜스에 의해 화면 디자인이 깨지는 현상을 방지하기 위해 프론트/백엔드에 안전 정제 헬퍼(`cleanMarkdown`)를 적용하여 렌더링 안정성을 복구했습니다.
   - **글로벌 CSS 로드 최적화**: Tailwind CSS v4 환경에서 타이포그래피 플러그인(`prose` 스타일링)이 정상적으로 주입되도록 [globals.css](file:///Users/white/Desktop/Obit/src/app/globals.css) 내 `@plugin "@tailwindcss/typography";` 선언부의 순서를 최상단으로 재조정하여 스타일 유실 문제를 완벽히 조치했습니다.
@@ -278,8 +279,8 @@ Gemini AI를 통해 생성된 자미두수 분석 결과를 저장합니다.
 - `search_vector` (tsvector) : Full-text 검색(명반과 매칭)을 위한 벡터 인덱스
 - `created_at` (timestamptz) : 생성일시, **NOT NULL** (Default: now())
 
-### 9.2 `z_love_tag_mapping` (연애 태그 매핑 테이블)
-연애 테마의 8개 태그를 지식베이스와 연결하여 프롬프트 컨텍스트를 더 정교하게 구성합니다.
+### 9.2 `z_love_tag_mapping` (연애 태그 매핑 테이블) [삭제/비활성화]
+*본 테이블은 연애 테마 데이터베이스 통합 리팩토링 과정에서 사용되지 않음이 확인되어 비활성화 및 삭제 처리되었습니다.*
 - `id` (uuid) : PK, **NOT NULL**
 - `knowledge_base_id` (uuid) : FK (`z_knowledge_base.id`), **NOT NULL**
 - `tag` (varchar) : 연애 태그 키 ('attraction_pattern', 'compatible_partner', 'conflict_pattern', 'solo_blocker', 'charm_asset', 'encounter_path', 'timing_signal', 'action_guide'), **NOT NULL**
