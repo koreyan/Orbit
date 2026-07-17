@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 import { createClient } from "@/lib/supabase/server";
-import ClientDate from "@/components/ClientDate";
+import ClientDate from "@/components/client-date";
 
 export const dynamic = "force-dynamic";
 

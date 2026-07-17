@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import LoginClient from "./LoginClient";
+import LoginClient from "./login-client";
 import { BackButton } from "@/components/ui/back-button";
 
 export const metadata: Metadata = {

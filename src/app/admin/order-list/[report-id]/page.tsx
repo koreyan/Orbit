@@ -5,7 +5,7 @@ import { fetchOrderDetail } from '@/lib/api/admin';
 import { formatKoreanDateTime } from '@/lib/format/korean-date-time';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import RegenerateButton from './RegenerateButton';
+import RegenerateButton from './regenerate-button';
 
 export const metadata = {
   title: '주문 상세 내역 | Orbit Admin',

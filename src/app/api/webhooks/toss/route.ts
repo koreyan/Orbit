@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 // Toss Payments Webhook API Route
 // 가상계좌 입금 통보, 결제 취소 통보 등의 비동기 이벤트를 처리합니다.
@@ -20,10 +20,7 @@ export async function POST(request: Request) {
     }
 
     // 보안 및 시스템 접근을 위해 Admin Client (SERVICE_ROLE_KEY) 사용
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabaseAdmin = createSupabaseAdminClient();
 
     // 1. payments 테이블 상태 업데이트 (웹훅으로 넘어온 최신 status 동기화)
     const { error: paymentError } = await supabaseAdmin

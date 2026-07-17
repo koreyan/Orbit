@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import ResultClient from "./ResultClient";
+import ResultClient from "./result-client";
 import { StarBackground } from "@/components/ui/star-background";
 import { getMyeongbanAction } from "@/app/actions/myeongban";
 import { BackButton } from "@/components/ui/back-button";

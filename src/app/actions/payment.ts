@@ -1,8 +1,9 @@
 "use server";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { getProductByTheme, isFreeDemoPaymentAllowed } from "@/lib/products/catalog";
+import { getTossSecretKey } from "@/lib/env/server";
 import { classifyPaymentKey } from "@/lib/payments/payment-policy";
+import { getProductByTheme, isFreeDemoPaymentAllowed } from "@/lib/products/catalog";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendTelegramNotification } from "@/lib/telegram";
 
 interface OrderPaymentSnapshot {
@@ -19,12 +20,7 @@ interface TossPaymentData {
   code?: string;
 }
 
-const createAdminClient = () => {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-};
+const createAdminClient = () => createSupabaseAdminClient();
 
 const normalizeTossResponse = (value: unknown): TossPaymentData => {
   if (typeof value !== "object" || value === null) {
@@ -136,10 +132,7 @@ export async function confirmPaymentAction(params: {
     return { success: true };
   }
 
-  const secretKey = process.env.TOSS_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error("TOSS_SECRET_KEY가 설정되지 않았습니다.");
-  }
+  const secretKey = getTossSecretKey();
 
   const encryptedSecretKey = Buffer.from(`${secretKey}:`).toString("base64");
 

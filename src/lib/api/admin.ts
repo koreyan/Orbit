@@ -1,15 +1,10 @@
 "use server";
 
 import { verifyAdmin } from "@/lib/auth/admin";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // 관리자 전용 우회 클라이언트 (RLS 무시)
-const getAdminSupabase = async () => {
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-};
+const getAdminSupabase = async () => createSupabaseAdminClient();
 
 export interface DashboardData {
   totalRevenue: number;

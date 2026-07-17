@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { AdminLoginForm } from "./AdminLoginForm";
+import { AdminLoginForm } from "./admin-login-form";
 import { Shield } from "lucide-react";
 
 export const metadata: Metadata = {

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import CheckoutClient from "./CheckoutClient";
+import CheckoutClient from "./checkout-client";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

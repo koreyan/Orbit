@@ -36,7 +36,7 @@ async function migrate() {
       const fileData = fs.readFileSync(filePath, 'utf8');
       const jsonData = JSON.parse(fileData);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('z_love_configs')
         .upsert(
           {

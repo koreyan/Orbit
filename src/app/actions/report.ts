@@ -5,12 +5,15 @@ import * as fs from "fs";
 import * as path from "path";
 import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import type { ExtractedChart, ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
+import { getOpenAiApiKey } from "@/lib/env/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
 import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prompts/love-data-extractor";
 import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
-import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
+import { buildGenericReportUserMessageJson } from "@/lib/reports/build-generic-report-user-message";
+import OpenAI from "openai";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 
 interface RuntimeChartPalace {
@@ -36,77 +39,6 @@ const asRuntimeChartData = (value: unknown): RuntimeChartData => value as Runtim
 const asRuntimeLiunianData = (value: unknown): RuntimeLiunianData => value as RuntimeLiunianData;
 
 
-
-const collectStarNamesFromPalace = (palace?: ExtractedPalace | null): string[] => {
-  if (!palace) return [];
-  return [palace.majorStars ?? [], palace.luckyStars ?? [], palace.unluckyStars ?? []]
-    .flat()
-    .flatMap((star) => star.sihua ? [star.name, star.sihua] : [star.name]);
-};
-
-const uniqueTerms = (terms: string[]): string[] => (
-  Array.from(new Set(terms.map((term) => term.trim()).filter(Boolean)))
-);
-
-const buildGenericReportUserMessageJson = ({
-  theme,
-  sajuData,
-  extractedStars,
-  lifePalace,
-  themePalaces,
-  knowledgeBase,
-  themeSpecificContext,
-  periodicPalacesInfo,
-}: {
-  theme: string;
-  sajuData: Record<string, unknown>;
-  extractedStars: ExtractedChart;
-  lifePalace: ExtractedPalace | null | undefined;
-  themePalaces: ExtractedPalace[];
-  knowledgeBase: Record<string, {
-    target_subject?: string;
-    core_trait?: string;
-    career_insight?: string;
-    love_insight?: string;
-    wellness_insight?: string;
-    periodic_insight?: string;
-  }>;
-  themeSpecificContext: string;
-  periodicPalacesInfo: string;
-}) => ({
-  request: {
-    theme,
-    outputFormat: theme === 'hobby' ? 'json' : 'markdown',
-  },
-  userInput: {
-    birthDate: typeof sajuData.date === 'string' ? sajuData.date : null,
-    birthTime: typeof sajuData.time === 'string' ? sajuData.time : null,
-    gender: typeof sajuData.gender === 'string' ? (sajuData.gender === 'M' ? '남성' : sajuData.gender === 'F' ? '여성' : sajuData.gender) : null,
-    location: typeof sajuData.location === 'string' ? sajuData.location : null,
-  },
-  chart: {
-    source: 'orrery',
-    lifePalace,
-    themePalaces,
-    rawExtractedStars: extractedStars,
-  },
-  dictionaryMatches: {
-    byStar: Object.entries(knowledgeBase).map(([matchedTerm, entry]) => ({
-      matchedTerm,
-      targetSubject: entry.target_subject,
-      coreTrait: entry.core_trait,
-      careerInsight: entry.career_insight,
-      loveInsight: entry.love_insight,
-      wellnessInsight: entry.wellness_insight,
-      periodicInsight: entry.periodic_insight,
-    })),
-  },
-  themeSpecificContext,
-  timing: {
-    periodicFlowText: periodicPalacesInfo,
-  },
-});
-
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
 
@@ -118,11 +50,7 @@ export async function generateReportAction(orderId: string) {
   const currentUserId = userData?.user?.id;
   console.log("[OBIT DEBUG 2] Auth check complete. currentUserId:", currentUserId);
 
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  const adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
 
   // 1. 주문 정보 가져오기 (adminClient로 가져와서 권한 체크 수행)
   const { data: order, error: orderError } = await adminClient
@@ -197,7 +125,6 @@ export async function generateReportAction(orderId: string) {
   const liuNianThemePalaces: ExtractedPalace[] = [];
   let shenGongPalaceName = "알 수 없음";
   let runtimeLiunian: RuntimeLiunianData | null = null;
-  const tenYearsLiunianList: RuntimeLiunianData[] = [];
   const palaceZhiMap: Record<string, string> = {};
 
   try {
@@ -684,20 +611,16 @@ ${commonRules}`
         const attempts = order.saju_data?.retry_count || 0;
         if (attempts < 1) {
           // 첫 시도 실패, retry_count 증가시켜 다음 수동 재생성 시에는 통과하도록 함
-          const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-          const adminClient = createSupabaseClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
+          const retryAdminClient = createSupabaseAdminClient();
           const newSajuData = { ...order.saju_data, retry_count: attempts + 1 };
-          await adminClient.from("orders").update({ saju_data: newSajuData }).eq("id", order.id);
+          await retryAdminClient.from("orders").update({ saju_data: newSajuData }).eq("id", order.id);
 
           throw new Error(`Simulated AI Error for retry`);
         }
       }
 
       console.log("[OBIT DEBUG 10] Calling OpenAI API (gpt-4o-mini)...");
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openai = new OpenAI({ apiKey: getOpenAiApiKey() });
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -792,11 +715,7 @@ export async function makeReportPublic(orderId: string) {
   if (!order || order.user_id !== userData.user.id) return { success: false, error: "Forbidden" };
 
   // Update using adminClient to bypass RLS for the update itself
-  const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-  const adminClient = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
 
   const { error } = await adminClient.from("reports").update({ is_public: true }).eq("order_id", orderId);
   if (error) {

@@ -40,6 +40,8 @@ npm run verify
 - `build`: Next.js 프로덕션 빌드 검사
 - `verify`: lint + typecheck + unit test + build 일괄 실행
 
+E2E는 테스트 Supabase 프로젝트에서만 실행합니다. `.env.test.local`에 `E2E_SUPABASE_PROJECT_REF`를 지정하지 않으면 DB 쓰기 가능 E2E는 중단됩니다.
+
 ## 작업 원칙
 
 - 제품 요구사항은 `PRD.md`를 우선합니다.
