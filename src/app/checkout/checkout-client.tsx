@@ -159,36 +159,29 @@ export default function CheckoutClient() {
     );
   }
 
+  const isFreeOrder = order?.amount === 0;
+
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      {/* Left: Toss Payments Widgets */}
-      <div className="flex-1 space-y-4">
-        <div className="rounded-2xl overflow-hidden relative min-h-[400px]">
-          {order?.amount === 0 ? (
-            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-pink-500/20 bg-pink-500/5 p-8 text-center">
-              <CreditCard className="mb-4 h-8 w-8 text-pink-300" />
-              <p className="text-lg font-bold text-white">테스트 기간 무료 제공</p>
-              <p className="mt-2 text-sm text-white/50">결제수단 입력 없이 0원으로 진행됩니다.</p>
-            </div>
-          ) : (
-            <>
-              {!isReady && (
-                <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              )}
-              {/* 토스페이먼츠 위젯이 기본적으로 흰색 배경이므로, CSS 필터를 통해 다크 모드로 변환합니다. */}
-              <div className="relative z-0 [filter:invert(0.93)_hue-rotate(180deg)_brightness(1.1)] mix-blend-screen opacity-90 transition-opacity duration-500">
-                <div id="payment-method" className="w-full"></div>
-                <div id="agreement" className="w-full mt-4"></div>
+    <div className={isFreeOrder ? "mx-auto flex max-w-md flex-col" : "flex flex-col lg:flex-row gap-8"}>
+      {!isFreeOrder && (
+        <div className="flex-1 space-y-4">
+          <div className="rounded-2xl overflow-hidden relative min-h-[400px]">
+            {!isReady && (
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            </>
-          )}
+            )}
+            {/* 토스페이먼츠 위젯이 기본적으로 흰색 배경이므로, CSS 필터를 통해 다크 모드로 변환합니다. */}
+            <div className="relative z-0 [filter:invert(0.93)_hue-rotate(180deg)_brightness(1.1)] mix-blend-screen opacity-90 transition-opacity duration-500">
+              <div id="payment-method" className="w-full"></div>
+              <div id="agreement" className="w-full mt-4"></div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Right: Order Summary */}
-      <div className="w-full lg:w-[360px] shrink-0">
+      <div className={isFreeOrder ? "w-full" : "w-full lg:w-[360px] shrink-0"}>
         <div className="bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden sticky top-24 shadow-2xl">
           <div className="p-6 border-b border-white/10">
             <h3 className="text-lg font-bold text-white mb-1">결제 상세정보</h3>

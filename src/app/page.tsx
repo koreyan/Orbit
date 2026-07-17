@@ -308,8 +308,7 @@ export default function LandingPage() {
         <div className="mt-8 mb-4 bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-start gap-2.5">
           <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
           <p className="text-xs text-primary/90 leading-snug">
-            정확한 자미두수 분석을 위해 <strong>양력 생년월일</strong>과 <strong>태어난 시간 및 지역</strong>을 기입해 주세요.<br />
-            <span className="text-[11px] text-primary/70">※ 본 서비스는 생년월일시를 결코 따로 저장하지 않습니다.</span>
+            정확한 자미두수 분석을 위해 <strong>양력 생년월일</strong>과 <strong>태어난 시간 및 지역</strong>을 기입해 주세요.
           </p>
         </div>
 

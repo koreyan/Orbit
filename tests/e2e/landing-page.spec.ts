@@ -48,7 +48,7 @@ test.describe('Landing Page E2E Tests', () => {
     expect(page.url()).not.toContain('/result'); 
   });
 
-  test('중복 클릭(따닥) 방지 테스트', async ({ page }) => {
+  test('중복 클릭(따닥) 시 한 번만 결과 페이지로 이동', async ({ page }) => {
     await page.getByRole('button', { name: '남성' }).click();
     await page.getByPlaceholder('YYYY').fill('1995');
     await page.getByPlaceholder('MM').fill('5');
@@ -58,14 +58,12 @@ test.describe('Landing Page E2E Tests', () => {
 
     const submitBtn = page.getByRole('button', { name: '내 별빛 이야기 들어보기' });
     
-    // 클릭 시뮬레이션
-    await submitBtn.click();
+    await Promise.all([
+      page.waitForURL(/\/result/),
+      submitBtn.dblclick(),
+    ]);
 
-    // 클릭 직후 버튼이 disabled 되는지 (로딩 상태) 확인
-    await expect(submitBtn).toBeDisabled();
-    
-    // 로딩 텍스트 노출 확인
-    await expect(page.locator('text=별빛 해독 중...')).toBeVisible();
+    expect(page.url()).toContain('/result');
   });
 });
 

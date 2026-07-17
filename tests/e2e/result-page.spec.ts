@@ -32,19 +32,18 @@ test.describe('Result Page E2E Tests', () => {
   test('테마 선택 후 결제 폼 정상 이동 및 파라미터 유지', async ({ page }) => {
     await page.goto(`/result${validQueryParams}`);
     
-    // 테마 선택 (커리어)
-    await page.locator('label[for="theme-career"]').click();
+    // 테마 선택 (연애 - 현재 활성 0원 데모 상품)
+    await page.locator('label[for="theme-love"]').click();
     
     // 다음 버튼 클릭
     await page.getByRole('button', { name: '선택한 테마의 내 별빛 이야기 들어보기' }).click();
 
-    // /order-form으로 라우팅 되는지 확인
-    await page.waitForURL(/\/order-form/);
+    // /checkout으로 라우팅 되는지 확인
+    await page.waitForURL(/\/checkout/);
     
-    // 쿼리 파라미터에 theme=career 가 잘 전달되었는지 확인
+    // checkout은 서버에서 생성한 orderId 기반으로 진입한다.
     const url = new URL(page.url());
-    expect(url.searchParams.get('theme')).toBe('career');
-    expect(url.searchParams.get('date')).toBe('1995-05-15');
+    expect(url.searchParams.get('orderId')).toBeTruthy();
   });
 
   test('새로고침 시 데이터 유지', async ({ page }) => {

@@ -347,3 +347,54 @@ Gemini AI를 통해 생성된 자미두수 분석 결과를 저장합니다.
 | 3. 주문 내역 리스트 (/admin/order-list) | 주문 목록 테이블 렌더링 | 주문이 하나도 없는 경우 | 표 레이아웃이 무너지지 않고 "조회된 주문 내역이 없습니다." 텍스트 노출 | O | Mock 데이터를 기반으로 PAID, PENDING 등 상태별 뱃지 렌더링 정상 검증 완료 |
 | 4. 상세 주문 내역 (/admin/order-list/[report-id]) | 상세 데이터 바인딩 및 액션 | 잘못된 report-id로 접근 시도, 혹은 액션 버튼(결과 재생성 등) 클릭 시 API 실패 | 없는 ID 접근 시 목록으로 강제 리다이렉트, 액션 실패 시 Toast 알림으로 에러 표기 | O | Next.js 15+ Async Params 변경 대응 완료 및 재생성/환불 버튼 노출 검증 완료 |
 | 5. 유저 리스트 (/admin/user-list) | 유저 목록 렌더링 및 필터 | 가입된 유저가 아예 없거나, DB 연결 실패 시 | 빈 상태 UI 노출, 유저 Role(admin/user)에 따른 Badge 시각적 구분 정상 작동 | O | ADMIN 및 USER 권한에 따른 상태 뱃지 시각적 구분 정상 검증 완료 |
+
+---
+
+## 2026-07-17 — 리포트 UX 개선
+
+### 요구사항
+- 랜딩의 생년월일시 미저장 안내 삭제
+- 소유자 리포트 상세에서 명반 표 재조회 및 초기 펼침 표시
+- 0원 checkout 혼동 안내 카드 삭제
+- 신규/기존 연애 리포트의 `5-2. 연애 팁 (개운 처방전)` 제거
+- Web Share 제거, 링크 복사 공유 유지
+
+### 구현
+- `MyeongbanGrid`를 `src/components/myeongban/myeongban-grid.tsx`로 추출해 `/result`와 소유자 리포트 상세에서 재사용한다.
+- `src/lib/myeongban/get-myeongban.ts`로 명반 계산 서버 서비스를 분리하고 `getMyeongbanAction`은 thin wrapper로 유지한다.
+- `src/lib/orders/order-saju-data.ts`에서 저장된 `orders.saju_data`를 runtime 검증하고, owner일 때만 명반 재계산에 사용한다.
+- `/reports/[report-id]`는 `order.user_id`와 현재 세션 user를 비교해 owner에게만 명반 섹션을 렌더링한다. 공개 방문자에게는 `saju_data`/명반 props를 전달하지 않는다.
+- `src/app/actions/report.ts`의 연애 프롬프트에서 `5-2` 생성 지침을 제거하고, `src/lib/report-prompts/love-data-extractor.ts`에서 `directionGuide` 계산/출력을 제거했다.
+- `stripLoveTipSection()`을 저장 전 후처리에 적용해 모델 응답에 남은 `5-2` 섹션을 제거한다.
+- `scripts/remove-love-tip-sections.ts`로 기존 DB markdown 정리 dry-run/apply/백업/expected-count guard를 구현했다.
+- `/checkout` 0원 주문은 안내 카드 없이 결제 상세 카드와 `0원으로 시작하기` CTA만 중앙 표시한다.
+- `/reports/[report-id]`의 `외부로 공유하기` 버튼과 Web Share 호출을 제거하고 링크 복사 공유는 유지했다.
+
+### 데이터 정리 결과
+- dry-run 대상: 14건
+- dry-run backup: `data/backups/love-tip-removal-2026-07-17T03-29-06-489Z.json`
+- dry-run SHA-256: `5650c606887abd03e4e1fba50ee36fbd6aad3e19ce413b0aed1a99919d9943f2`
+- apply backup: `data/backups/love-tip-removal-2026-07-17T03-33-50-035Z.json`
+- apply SHA-256: `27e12f1a73bf9c6fceaf1fa45b12e1d9fc14ff537ce26bc7152787829a169794`
+- apply 성공: 14건 / 실패: 0건
+- 재검증: apply 후 dry-run 대상 0건
+
+### 검증
+- baseline lint: 통과
+- baseline typecheck: 통과
+- baseline unit: 6 files / 19 tests 통과
+- 최종 `npm run verify`: 통과
+  - lint: 통과
+  - typecheck: 통과
+  - unit: 8 files / 28 tests 통과
+  - build: 통과, 17 static pages 생성
+- Playwright E2E:
+  - `landing-page`, `checkout-page`, `result-page` desktop-chromium: 11 tests 통과
+  - 지정 전체 E2E 1차 실행: `.env.test.local` 테스트 Supabase 값 부재로 `backend-report-prompt`, `backend-report-rls` import 단계 실패
+  - `iphone-webkit`, `ipad-webkit`: `/Users/white/Library/Caches/ms-playwright/webkit-2287/pw_run.sh` 미존재로 실행 불가
+  - `reports-page` desktop-chromium: 기존 mock order/session 기반 테스트가 현재 Supabase auth/DB 흐름과 맞지 않아 실패
+
+### Git
+- 구현 브랜치: `obit/report-ux-improvements`
+- 구현 commit SHA: 최종 보고 기준으로 기록
+- push 여부: 최종 검증 후 `obit/report-ux-improvements` 브랜치로 push

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import ResultClient from "./result-client";
 import { StarBackground } from "@/components/ui/star-background";
-import { getMyeongbanAction } from "@/app/actions/myeongban";
+import { getMyeongban } from "@/lib/myeongban/get-myeongban";
 import { BackButton } from "@/components/ui/back-button";
 
 type Props = {
@@ -26,7 +26,7 @@ export default async function ResultPage(props: Props) {
   let daxianList;
   let currentLiunian;
   try {
-    const result = await getMyeongbanAction({ date: dateStr, time: timeStr, gender: genderStr, location: locationStr });
+    const result = await getMyeongban({ date: dateStr, time: timeStr, gender: genderStr, location: locationStr });
     chartData = result.chartData;
     interpretation = result.interpretation;
     daxianList = result.daxianList;
