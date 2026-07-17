@@ -96,6 +96,8 @@ export const buildLoveUserMessageJson = ({
     return `- ${p.label}: [${translateCategory('주성')}] ${major} / [${translateCategory('길성')}] ${lucky} / [${translateCategory('살성')}] ${unlucky}`;
   }).join('\n');
 
+  const requiredMonthlyFlowMonths = datingDatabaseMatches.loveLuck.requiredMonthlyFlowMonths;
+
   return {
     request: {
       theme: "love",
@@ -111,6 +113,12 @@ export const buildLoveUserMessageJson = ({
     },
     datingDatabaseMatches,
     timing: {
+      monthlyFlowRule: {
+        timezone: "Asia/Seoul",
+        startMonthInclusive: datingDatabaseMatches.loveLuck.monthlyFlowStartMonth,
+        requiredMonths: requiredMonthlyFlowMonths,
+        instruction: `올해 연애운 월별 박스는 ${requiredMonthlyFlowMonths.join(", ")}월을 모두 포함해야 하며 첫 박스는 ${requiredMonthlyFlowMonths[0] ?? "현재"}월이어야 한다. 현재 월을 건너뛰고 다음 달부터 시작하지 않는다.`,
+      },
       periodicFlowText,
     },
   };
