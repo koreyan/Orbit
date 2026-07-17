@@ -5,6 +5,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { filterThemePalaces, findLokJonPalace, findSiHuaPalaces } from "@/lib/ziwei-extractor";
 import type { ExtractedChart, ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
+import { getOpenAiApiKey } from "@/lib/env/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
 import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prompts/love-data-extractor";
@@ -48,11 +50,7 @@ export async function generateReportAction(orderId: string) {
   const currentUserId = userData?.user?.id;
   console.log("[OBIT DEBUG 2] Auth check complete. currentUserId:", currentUserId);
 
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  const adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
 
   // 1. 주문 정보 가져오기 (adminClient로 가져와서 권한 체크 수행)
   const { data: order, error: orderError } = await adminClient
@@ -613,20 +611,16 @@ ${commonRules}`
         const attempts = order.saju_data?.retry_count || 0;
         if (attempts < 1) {
           // 첫 시도 실패, retry_count 증가시켜 다음 수동 재생성 시에는 통과하도록 함
-          const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-          const adminClient = createSupabaseClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
+          const retryAdminClient = createSupabaseAdminClient();
           const newSajuData = { ...order.saju_data, retry_count: attempts + 1 };
-          await adminClient.from("orders").update({ saju_data: newSajuData }).eq("id", order.id);
+          await retryAdminClient.from("orders").update({ saju_data: newSajuData }).eq("id", order.id);
 
           throw new Error(`Simulated AI Error for retry`);
         }
       }
 
       console.log("[OBIT DEBUG 10] Calling OpenAI API (gpt-4o-mini)...");
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openai = new OpenAI({ apiKey: getOpenAiApiKey() });
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -721,11 +715,7 @@ export async function makeReportPublic(orderId: string) {
   if (!order || order.user_id !== userData.user.id) return { success: false, error: "Forbidden" };
 
   // Update using adminClient to bypass RLS for the update itself
-  const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-  const adminClient = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
 
   const { error } = await adminClient.from("reports").update({ is_public: true }).eq("order_id", orderId);
   if (error) {

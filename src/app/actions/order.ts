@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createChart } from "@orrery/core/ziwei";
 import { extractMainStars } from "@/lib/ziwei-extractor";
@@ -13,6 +14,7 @@ import {
   serializeOrderClaimCookieValue,
   verifyOrderClaimToken,
 } from "@/lib/orders/claim-token";
+import { assertOrderStatus } from "@/lib/orders/types";
 import type { ResultParams, ZiweiChart } from "@/lib/ziwei-types";
 
 export async function createAnonymousOrderAction(params: {
@@ -45,11 +47,7 @@ export async function createAnonymousOrderAction(params: {
   };
 
   // RLS(Row Level Security) 정책 우회를 위해 adminClient 사용
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  const adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
 
   // 유저 정보 없이 주문서 생성 (pending 상태)
   const { data: orderData, error: orderError } = await adminClient
@@ -97,11 +95,7 @@ export async function linkUserToOrderAction(params: {
   }
 
   const supabase = await createClient();
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  const adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
   
   // 주문이 결제 완료 상태인지 확인
   const { data: orderData, error: orderError } = await adminClient
@@ -114,7 +108,9 @@ export async function linkUserToOrderAction(params: {
     throw new Error("주문 정보를 찾을 수 없습니다.");
   }
   
-  if (orderData.status !== "paid") {
+  const orderStatus = assertOrderStatus(orderData.status);
+
+  if (orderStatus !== "paid") {
     throw new Error("결제가 완료되지 않은 주문입니다.");
   }
 
@@ -232,11 +228,7 @@ export async function linkUserToOrderAction(params: {
 
 export async function getOrderAction(orderId: string) {
   // RLS 우회를 위해 adminClient 사용 (익명 가주문 조회를 위해)
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  const adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
 
   const { data, error } = await adminClient
     .from("orders")
