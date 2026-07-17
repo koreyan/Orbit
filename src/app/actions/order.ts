@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createChart } from "@orrery/core/ziwei";
 import { extractMainStars } from "@/lib/ziwei-extractor";
+import { resolveOrderProduct } from "@/lib/products/catalog";
 import type { ResultParams, ZiweiChart } from "@/lib/ziwei-types";
 
 export async function createAnonymousOrderAction(params: {
@@ -11,6 +12,7 @@ export async function createAnonymousOrderAction(params: {
   amount: number;
 }) {
   const { saju_data, theme, amount } = params;
+  const product = resolveOrderProduct({ theme, clientAmount: amount });
 
   // 1차 명반 계산 및 추출 (JSON 형태로 DB 보관)
   let extractedStars = null;
@@ -45,8 +47,8 @@ export async function createAnonymousOrderAction(params: {
     .insert({
       user_id: null, // 익명 주문
       saju_data: enrichedSajuData,
-      theme,
-      amount,
+      theme: product.theme,
+      amount: product.amount,
       status: "pending",
     })
     .select("id")
@@ -187,7 +189,7 @@ export async function getOrderAction(orderId: string) {
 
   const { data, error } = await adminClient
     .from("orders")
-    .select("*")
+    .select("id, theme, amount, status")
     .eq("id", orderId)
     .single();
 

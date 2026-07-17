@@ -16,8 +16,9 @@ trigger: always_on
 
 # Coding Style Guidelines
 
-- **Functional**: 모든 컴포넌트는 `const`와 Arrow Function(화살표 함수)으로 작성한다.
+- **Functional**: 모든 직접 작성 컴포넌트는 `const`와 Arrow Function(화살표 함수)으로 작성한다.
 (예: `const Component = () => {}` O / `function Component() {}` X)
+  - 예외: `src/components/ui/`의 Shadcn/Base UI 기본 컴포넌트는 생성 원본 갱신 가능성을 위해 이 규칙을 강제하지 않는다.
 - **File Naming**: 폴더와 파일명은 `kebab-case`를 사용한다. (예: `user-profile.tsx`)
 - **Clean Code**: 코드는 간결하게 유지하고(DRY 원칙), 주석은 '무엇(What)'이 아닌 '왜(Why)'에 대해서만 단다.
 - **Error Handling**: 모든 비동기 요청(Async/Await)에는 `try/catch` 블록을 사용하여 에러를 우아하게 처리한다.
