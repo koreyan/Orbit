@@ -396,5 +396,46 @@ Gemini AI를 통해 생성된 자미두수 분석 결과를 저장합니다.
 
 ### Git
 - 구현 브랜치: `obit/report-ux-improvements`
-- 구현 commit SHA: 최종 보고 기준으로 기록
-- push 여부: 최종 검증 후 `obit/report-ux-improvements` 브랜치로 push
+- 구현 commit SHA: `4248235` (`리포트 UX 개선과 연애 팁 정리`)
+- push/merge: PR #4 `https://github.com/koreyan/Orbit/pull/4` main merge 완료
+
+---
+
+## 2026-07-17 — 리포트 생성 실패 알림 및 재생성 저장 검증 수정
+
+### 문제
+- 결제 이후 `/reports/[report-id]`에서 명반 추출/해석 데이터가 없거나 생성 파이프라인이 OpenAI 호출 전후에서 실패하면 Telegram 실패 알림이 오지 않았다.
+- `별빛 다시 읽어내기` 재생성 후 성공 알림은 왔지만 상세 페이지가 계속 실패 화면으로 남을 수 있었다.
+
+### 원인
+- 기존 실패 알림은 OpenAI API 호출 `catch` 내부에만 있어서 명반 추출 데이터 누락, 컨텍스트 생성 오류, DB 저장 오류 등은 알림 대상에서 빠졌다.
+- `reports.update(...).select()`의 `updateError` 또는 update row 0건을 성공과 구분하지 않아, 실제 저장 실패 후에도 성공 Telegram 알림이 발송될 수 있었다.
+- 성공/실패 후 `/reports` 및 `/reports/[report-id]` revalidate가 없어 재생성 직후 stale 상세 화면이 남을 가능성이 있었다.
+
+### 구현
+- `src/app/actions/report.ts`에서 리포트 row를 `generating`으로 만든 뒤 생성 파이프라인 전체를 outer `try/catch`로 감쌌다.
+- 공통 실패 처리에서 `reports.status = failed`로 전이하고 Telegram 실패 알림을 발송한다.
+- OpenAI 호출 실패뿐 아니라 명반 추출 데이터 누락, 컨텍스트 생성 오류, DB 저장 오류도 실패 알림 대상에 포함했다.
+- `src/lib/reports/report-generation-result.ts`를 추가해 다음 두 동작을 분리했다.
+  - `assertReportGenerationUpdateApplied()`: DB update error 또는 update row 0건이면 예외 발생
+  - `buildReportFailureNotification()`: 주문번호/사유/오류를 포함한 Telegram 실패 메시지 생성
+- 성공 Telegram 알림은 `reports.content`, `status: completed`, `generated_at` 저장이 실제 성공한 뒤에만 발송하도록 했다.
+- 성공/실패 양쪽에서 `/reports`와 `/reports/[report-id]`를 revalidate하도록 했다.
+- `tests/unit/report-generation-result.test.ts`를 추가해 저장 실패, update row 0건, 실패 알림 메시지 포맷을 회귀 테스트로 고정했다.
+
+### 검증
+- `npm run test:unit -- tests/unit/report-generation-result.test.ts`: 통과, 1 file / 3 tests
+- `npm run typecheck`: 통과
+- `npm run verify`: 통과
+  - lint: 통과
+  - typecheck: 통과
+  - unit: 9 files / 31 tests 통과
+  - build: 통과, 17 static pages 생성
+- GitHub Actions `verify`: 통과
+- Vercel Preview: 통과
+
+### Git
+- 구현 브랜치: `obit/fix-report-generation-alert-refresh`
+- PR: `https://github.com/koreyan/Orbit/pull/5`
+- merge commit: `4fd06be8fd2efadd0241699fa8ef56a91dfc3d8c`
+- merge 시각: `2026-07-17T04:09:46Z`
