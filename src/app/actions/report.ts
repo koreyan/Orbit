@@ -9,8 +9,9 @@ import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
 import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prompts/love-data-extractor";
 import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
-import OpenAI from "openai";
 import { sendTelegramNotification } from "@/lib/telegram";
+import { buildGenericReportUserMessageJson } from "@/lib/reports/build-generic-report-user-message";
+import OpenAI from "openai";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 
 interface RuntimeChartPalace {
@@ -35,77 +36,6 @@ interface RuntimeLiunianData {
 const asRuntimeChartData = (value: unknown): RuntimeChartData => value as RuntimeChartData;
 const asRuntimeLiunianData = (value: unknown): RuntimeLiunianData => value as RuntimeLiunianData;
 
-
-
-const collectStarNamesFromPalace = (palace?: ExtractedPalace | null): string[] => {
-  if (!palace) return [];
-  return [palace.majorStars ?? [], palace.luckyStars ?? [], palace.unluckyStars ?? []]
-    .flat()
-    .flatMap((star) => star.sihua ? [star.name, star.sihua] : [star.name]);
-};
-
-const uniqueTerms = (terms: string[]): string[] => (
-  Array.from(new Set(terms.map((term) => term.trim()).filter(Boolean)))
-);
-
-const buildGenericReportUserMessageJson = ({
-  theme,
-  sajuData,
-  extractedStars,
-  lifePalace,
-  themePalaces,
-  knowledgeBase,
-  themeSpecificContext,
-  periodicPalacesInfo,
-}: {
-  theme: string;
-  sajuData: Record<string, unknown>;
-  extractedStars: ExtractedChart;
-  lifePalace: ExtractedPalace | null | undefined;
-  themePalaces: ExtractedPalace[];
-  knowledgeBase: Record<string, {
-    target_subject?: string;
-    core_trait?: string;
-    career_insight?: string;
-    love_insight?: string;
-    wellness_insight?: string;
-    periodic_insight?: string;
-  }>;
-  themeSpecificContext: string;
-  periodicPalacesInfo: string;
-}) => ({
-  request: {
-    theme,
-    outputFormat: theme === 'hobby' ? 'json' : 'markdown',
-  },
-  userInput: {
-    birthDate: typeof sajuData.date === 'string' ? sajuData.date : null,
-    birthTime: typeof sajuData.time === 'string' ? sajuData.time : null,
-    gender: typeof sajuData.gender === 'string' ? (sajuData.gender === 'M' ? '남성' : sajuData.gender === 'F' ? '여성' : sajuData.gender) : null,
-    location: typeof sajuData.location === 'string' ? sajuData.location : null,
-  },
-  chart: {
-    source: 'orrery',
-    lifePalace,
-    themePalaces,
-    rawExtractedStars: extractedStars,
-  },
-  dictionaryMatches: {
-    byStar: Object.entries(knowledgeBase).map(([matchedTerm, entry]) => ({
-      matchedTerm,
-      targetSubject: entry.target_subject,
-      coreTrait: entry.core_trait,
-      careerInsight: entry.career_insight,
-      loveInsight: entry.love_insight,
-      wellnessInsight: entry.wellness_insight,
-      periodicInsight: entry.periodic_insight,
-    })),
-  },
-  themeSpecificContext,
-  timing: {
-    periodicFlowText: periodicPalacesInfo,
-  },
-});
 
 export async function generateReportAction(orderId: string) {
   if (!orderId) throw new Error("No orderId provided");
@@ -197,7 +127,6 @@ export async function generateReportAction(orderId: string) {
   const liuNianThemePalaces: ExtractedPalace[] = [];
   let shenGongPalaceName = "알 수 없음";
   let runtimeLiunian: RuntimeLiunianData | null = null;
-  const tenYearsLiunianList: RuntimeLiunianData[] = [];
   const palaceZhiMap: Record<string, string> = {};
 
   try {

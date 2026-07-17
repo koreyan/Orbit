@@ -1,6 +1,6 @@
 import type { ExtractedChart, ExtractedPalace, StarWithSiHua } from "@/lib/ziwei-extractor";
 import type { LovePalaceRole, LovePalaceSnapshot, LoveStarSignal } from "./types";
-import { translatePalace, translateStar, translateSihua as translateSihuaTerm, translateStarWithSihua, translateCategory } from "./term-translator";
+import { translatePalace, translateStar, translateSihua as translateSihuaTerm, translateCategory } from "./term-translator";
 
 interface LoveUserInputJson {
   birthDate: string | null;

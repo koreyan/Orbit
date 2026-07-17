@@ -1,5 +1,4 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import type { LoveEvidenceTag } from './report-prompts/types';
 
 export interface KnowledgeBaseEntry {
   target_subject: string;
@@ -17,7 +16,7 @@ export interface KnowledgeBaseContextEntry extends KnowledgeBaseEntry {
 
 const KNOWLEDGE_BASE_SELECT_FIELDS = 'target_subject, core_trait, career_insight, love_insight, wellness_insight, periodic_insight' as const;
 
-async function fetchKnowledgeBaseByTerms(
+export async function fetchKnowledgeBaseByTerms(
   supabase: SupabaseClient,
   category: 'star' | 'palace' | 'formation',
   terms: string[]

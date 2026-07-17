@@ -1,9 +1,18 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createChart } from "@orrery/core/ziwei";
 import { extractMainStars } from "@/lib/ziwei-extractor";
 import { resolveOrderProduct } from "@/lib/products/catalog";
+import {
+  createOrderClaimToken,
+  isOrderClaimTokenExpired,
+  ORDER_CLAIM_COOKIE_NAME,
+  parseOrderClaimCookieValue,
+  serializeOrderClaimCookieValue,
+  verifyOrderClaimToken,
+} from "@/lib/orders/claim-token";
 import type { ResultParams, ZiweiChart } from "@/lib/ziwei-types";
 
 export async function createAnonymousOrderAction(params: {
@@ -13,6 +22,7 @@ export async function createAnonymousOrderAction(params: {
 }) {
   const { saju_data, theme, amount } = params;
   const product = resolveOrderProduct({ theme, clientAmount: amount });
+  const claimToken = createOrderClaimToken({ now: new Date() });
 
   // 1차 명반 계산 및 추출 (JSON 형태로 DB 보관)
   let extractedStars = null;
@@ -50,6 +60,9 @@ export async function createAnonymousOrderAction(params: {
       theme: product.theme,
       amount: product.amount,
       status: "pending",
+      claim_token_hash: claimToken.hash,
+      claim_token_expires_at: claimToken.expiresAt.toISOString(),
+      claim_token_used_at: null,
     })
     .select("id")
     .single();
@@ -57,6 +70,17 @@ export async function createAnonymousOrderAction(params: {
   if (orderError) {
     throw new Error(`주문 생성 실패: ${orderError.message}`);
   }
+
+  const cookieStore = await cookies();
+  cookieStore.set({
+    name: ORDER_CLAIM_COOKIE_NAME,
+    value: serializeOrderClaimCookieValue({ orderId: orderData.id, token: claimToken.token }),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: claimToken.expiresAt,
+  });
 
   return { orderId: orderData.id };
 }
@@ -82,7 +106,7 @@ export async function linkUserToOrderAction(params: {
   // 주문이 결제 완료 상태인지 확인
   const { data: orderData, error: orderError } = await adminClient
     .from("orders")
-    .select("status")
+    .select("status, claim_token_hash, claim_token_expires_at, claim_token_used_at")
     .eq("id", orderId)
     .single();
     
@@ -92,6 +116,30 @@ export async function linkUserToOrderAction(params: {
   
   if (orderData.status !== "paid") {
     throw new Error("결제가 완료되지 않은 주문입니다.");
+  }
+
+  const cookieStore = await cookies();
+  const claimCookie = cookieStore.get(ORDER_CLAIM_COOKIE_NAME)?.value;
+  const parsedClaim = claimCookie ? parseOrderClaimCookieValue(claimCookie) : null;
+
+  if (!parsedClaim || parsedClaim.orderId !== orderId) {
+    throw new Error("주문 소유 확인에 실패했습니다.");
+  }
+
+  if (!orderData.claim_token_hash || !orderData.claim_token_expires_at) {
+    throw new Error("주문 소유 확인 정보가 없습니다.");
+  }
+
+  if (orderData.claim_token_used_at) {
+    throw new Error("이미 계정에 연결된 주문입니다.");
+  }
+
+  if (isOrderClaimTokenExpired({ expiresAt: orderData.claim_token_expires_at })) {
+    throw new Error("주문 소유 확인 시간이 만료되었습니다.");
+  }
+
+  if (!verifyOrderClaimToken({ token: parsedClaim.token, hash: orderData.claim_token_hash })) {
+    throw new Error("주문 소유 확인에 실패했습니다.");
   }
 
   // 가상 이메일 생성
@@ -163,8 +211,9 @@ export async function linkUserToOrderAction(params: {
   // 2. 주문서 업데이트 (user_id 귀속)
   const { error: updateError } = await adminClient
     .from("orders")
-    .update({ user_id: userId })
-    .eq("id", orderId);
+    .update({ user_id: userId, claim_token_used_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .is("claim_token_used_at", null);
 
   if (updateError) {
     throw new Error(`주문에 유저 정보 연동 실패: ${updateError.message}`);
@@ -175,6 +224,8 @@ export async function linkUserToOrderAction(params: {
     .from("users")
     .update({ phone_number: phone })
     .eq("id", userId);
+
+  cookieStore.delete(ORDER_CLAIM_COOKIE_NAME);
 
   return { success: true, userId };
 }

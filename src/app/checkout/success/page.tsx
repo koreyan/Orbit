@@ -1,4 +1,4 @@
-import { AccountLinkingForm } from "./AccountLinkingForm";
+import { AccountLinkingForm } from "./account-linking-form";
 import { CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";

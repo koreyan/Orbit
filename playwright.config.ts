@@ -2,10 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '.env.local') });
+const testEnvPath = path.resolve(__dirname, '.env.test.local');
+dotenv.config({ path: testEnvPath });
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -22,8 +24,16 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'desktop-chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'iphone-webkit',
+      use: { ...devices['iPhone 14'] },
+    },
+    {
+      name: 'ipad-webkit',
+      use: { ...devices['iPad Pro 11'] },
     },
   ],
 });
