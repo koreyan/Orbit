@@ -15,6 +15,7 @@ import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { buildGenericReportUserMessageJson } from "@/lib/reports/build-generic-report-user-message";
 import { cleanMarkdown, stripLoveTipSection } from "@/lib/reports/report-markdown";
+import { assertReportGenerationUpdateApplied, buildReportFailureNotification } from "@/lib/reports/report-generation-result";
 import OpenAI from "openai";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 
@@ -79,11 +80,6 @@ export async function generateReportAction(orderId: string) {
   }
 
   const { theme, saju_data } = order;
-  const extractedStars = saju_data?.extracted_stars as ExtractedChart | undefined;
-
-  if (!extractedStars) {
-    throw new Error("명반 추출 데이터가 없습니다.");
-  }
 
   // 2. Report 레코드 확인 또는 생성
   const { data: existingReport } = await adminClient
@@ -117,6 +113,20 @@ export async function generateReportAction(orderId: string) {
     await adminClient.from("reports").update({ status: "generating" }).eq("id", reportId);
   }
   console.log("[OBIT DEBUG 4] Report status set to generating. ReportId:", reportId);
+
+  const notifyReportFailure = async (reason: string, error: unknown) => {
+    if (reportId) {
+      await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
+    }
+    await sendTelegramNotification(buildReportFailureNotification({ orderId, reason, error }));
+  };
+
+  try {
+    const extractedStars = saju_data?.extracted_stars as ExtractedChart | undefined;
+
+    if (!extractedStars) {
+      throw new Error("명반 추출 데이터가 없습니다.");
+    }
 
   // 3. 테마에 따른 궁 필터링
   const { lifePalace, themePalaces } = filterThemePalaces(extractedStars, theme);
@@ -647,10 +657,7 @@ ${commonRules}`
 
     } catch (error) {
       console.error(`OpenAI API 호출 실패:`, error);
-      await adminClient.from("reports").update({ status: "failed" }).eq("id", reportId);
-      // 텔레그램 알림: 리포트 생성 실패
-      await sendTelegramNotification(`❌ <b>[리포트 생성 실패]</b>\n주문번호: <code>${orderId}</code>\n사유: OpenAI API 호출 오류\n에러: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
-      throw new Error("리포트 생성에 실패했습니다. (API 호출 오류)");
+      throw new Error(`OpenAI API 호출 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
     }
   }
 
@@ -661,11 +668,12 @@ ${commonRules}`
       generated_at: new Date().toISOString()
     }).eq("id", reportId).select();
     
-    if (updateError) {
-      console.error("[OBIT DEBUG 12 ERROR] DB update failed:", updateError);
-    } else {
-      console.log("[OBIT DEBUG 12] DB update succeeded. Affected rows:", updateData?.length);
-    }
+    assertReportGenerationUpdateApplied({
+      updateErrorMessage: updateError?.message,
+      updatedRows: updateData,
+    });
+
+    console.log("[OBIT DEBUG 12] DB update succeeded. Affected rows:", updateData?.length);
 
     // 텔레그램 알림: 리포트 생성 성공
     await sendTelegramNotification(`✨ <b>[리포트 생성 완료]</b>\n주문번호: <code>${orderId}</code>\nAI가 성공적으로 별빛 이야기를 해독했습니다!`);
@@ -673,8 +681,19 @@ ${commonRules}`
     // 관리자 페이지 등에서 최신 데이터를 볼 수 있도록 캐시 무효화
     revalidatePath('/admin/order-list');
     revalidatePath(`/admin/order-list/${orderId}`);
+    revalidatePath('/reports');
+    revalidatePath(`/reports/${orderId}`);
 
     return { success: true, reportId };
+  }
+
+  throw new Error("리포트 생성 결과가 비어 있습니다.");
+  } catch (error) {
+    console.error("[OBIT REPORT GENERATION FAILED]", error);
+    await notifyReportFailure("리포트 생성 처리 오류", error);
+    revalidatePath('/reports');
+    revalidatePath(`/reports/${orderId}`);
+    throw error;
   }
 }
 
