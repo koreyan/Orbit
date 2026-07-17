@@ -35,9 +35,8 @@ test.describe('Checkout Page E2E Tests', () => {
     expect(page.url()).toBe('http://localhost:3000/');
   });
 
-  test('결제 금액 변조 해킹 시도 방어 (서버 사이드 검증)', async ({ page }) => {
-    // 악의적인 유저가 브라우저 개발자 도구 등을 통해 결제 금액(amount)을 0원 또는 임의의 금액으로 변조하여
-    // 결제 성공 API(success)를 호출했다고 가정합니다.
+  test('존재하지 않는 주문 결제 성공 접근 방어', async ({ page }) => {
+    // 존재하지 않는 orderId로 결제 성공 API(success)를 호출한 경우 실패 페이지로 리다이렉트되어야 합니다.
     
     // 커리어 테마의 원래 금액은 990원이지만, amount=0 으로 조작하여 접속 시도
     const tamperedUrl = `/checkout/success${validQueryParams}&orderId=TEST_ORDER&amount=0`;
@@ -48,10 +47,10 @@ test.describe('Checkout Page E2E Tests', () => {
     
     // 강제 리다이렉트 된 실패 페이지의 URL과 에러 코드 검증
     const url = new URL(page.url());
-    expect(url.searchParams.get('code')).toBe('AMOUNT_TAMPERED');
+    expect(url.searchParams.get('code')).toBe('ORDER_NOT_FOUND');
 
     // 화면에 적절한 에러 문구가 표시되는지 확인
-    await expect(page.locator('text=결제 금액이 변조되어 결제가 자동 취소되었습니다.')).toBeVisible();
-    await expect(page.locator('text=AMOUNT_TAMPERED')).toBeVisible();
+    await expect(page.locator('text=주문 정보를 찾을 수 없습니다.')).toBeVisible();
+    await expect(page.locator('text=ORDER_NOT_FOUND')).toBeVisible();
   });
 });

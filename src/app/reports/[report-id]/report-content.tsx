@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Share2, Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2, RefreshCcw, BookOpenText, Quote, Layers3 } from "lucide-react";
+import { Link as LinkIcon, Check, Sparkles, Star, Target, Heart, Compass, Clock, Loader2, RefreshCcw, BookOpenText, Quote, Layers3 } from "lucide-react";
 import { makeReportPublic, generateReportAction } from "@/app/actions/report";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -177,23 +177,6 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleShare = async () => {
-    await handleMakePublic();
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "나의 별빛 이야기 - Orbit",
-          text: "오르빗에서 나만의 진짜 모습을 해독했어요! 제 별빛 이야기를 확인해보세요.",
-          url: window.location.href,
-        });
-      } catch (error) {
-        console.log("공유하기가 취소되었거나 지원하지 않습니다.", error);
-      }
-    } else {
-      handleCopyLink();
     }
   };
 
@@ -466,13 +449,13 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
       )}
 
       <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 text-center shadow-2xl backdrop-blur-xl md:p-8">
-        <h4 className="text-lg font-bold text-white/85">내 별빛 이야기를 공유해보세요</h4>
-        <p className="mt-2 text-sm text-white/45">공유 링크를 만들면 로그인 없이도 이 리포트를 열람할 수 있습니다.</p>
-        <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
+        <h4 className="text-lg font-bold text-white/85">내 별빛 이야기 링크</h4>
+        <p className="mt-2 text-sm text-white/45">링크를 만들면 로그인 없이 리포트를 열람할 수 있습니다.</p>
+        <div className="mt-6 flex justify-center">
           <Button
             onClick={handleCopyLink}
             variant="outline"
-            className="h-14 w-full rounded-xl border-white/20 bg-white/5 px-8 text-base text-white transition-all hover:bg-white/10 sm:w-auto"
+            className="h-14 w-full rounded-xl border-white/20 bg-white/5 px-8 text-base text-white transition-all hover:bg-white/10 sm:max-w-sm"
           >
             {copied ? (
               <>
@@ -485,13 +468,6 @@ export default function ReportContent({ reportId, theme, status, content }: Repo
                 링크 복사하기
               </>
             )}
-          </Button>
-          <Button
-            onClick={handleShare}
-            className="h-14 w-full rounded-xl bg-orange-500 px-8 text-base font-black text-white shadow-[0_0_20px_rgba(255,107,53,0.3)] transition-all hover:bg-orange-400 sm:w-auto"
-          >
-            <Share2 className="mr-2 h-5 w-5" />
-            외부로 공유하기
           </Button>
         </div>
       </section>

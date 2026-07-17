@@ -95,12 +95,13 @@ let ownerUserId: string;
     await page.waitForURL('**/reports');
 
     await page.goto(`/reports/${dummyOrderId}`);
-    await expect(page.locator('text=내 별빛 이야기를 공유해보세요')).toBeVisible();
+    await expect(page.locator('text=내 별빛 이야기 링크')).toBeVisible();
     await expect(page.locator('text=RLS Core Trait')).toBeVisible();
+    await expect(page.getByRole('button', { name: '외부로 공유하기' })).toHaveCount(0);
 
-    // --- Phase 3: 공유하기 클릭 (권한 개방) ---
-    const shareBtn = page.locator('button').filter({ hasText: '외부로 공유하기' });
-    await shareBtn.click();
+    // --- Phase 3: 링크 복사 클릭 (권한 개방) ---
+    const copyBtn = page.locator('button').filter({ hasText: '링크 복사하기' });
+    await copyBtn.click();
     
     // DB 업데이트 대기
     await page.waitForTimeout(1500);

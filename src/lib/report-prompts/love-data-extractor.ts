@@ -209,13 +209,6 @@ export interface UnconsciousNeedMatch {
   solution: string;
 }
 
-export interface EncounterDirectionGuide {
-  zhi: string;
-  direction: string;
-  luckyItems: string;
-  actionGuideline: string;
-}
-
 export interface LoveLuckMatchResult {
   dohwaActivation: DohwaActivationMatch | null;
   blocker: { starName: string; effect: string } | null;
@@ -225,7 +218,6 @@ export interface LoveLuckMatchResult {
   requiredMonthlyFlowMonths: number[];
   monthlyFlow: MonthlyFlowEntry[];
   unconsciousNeeds: UnconsciousNeedMatch | null;
-  directionGuide: EncounterDirectionGuide | null;
 }
 
 export interface DatingDatabaseMatches {
@@ -692,7 +684,6 @@ function extractLoveLuck(configs: LoveConfigs,
   const monthlyFlow: MonthlyFlowEntry[] = [];
   
   let unconsciousNeeds: UnconsciousNeedMatch | null = null;
-  let directionGuide: EncounterDirectionGuide | null = null;
 
   const dohwaActivationSource = loveLuckDb.dohwaActivation as Record<string, Omit<DohwaActivationMatch, "starName">>;
   const encounterPathsSource = loveLuckDb.encounterPaths as Record<string, { pathDescription: string }>;
@@ -854,19 +845,6 @@ function extractLoveLuck(configs: LoveConfigs,
       });
     });
 
-    // 2번 콘텐츠: 연애 방위학 연산 (유년 부처궁 지지 매칭)
-    const spouseZhi = liunian.palaces["夫妻"];
-    if (spouseZhi) {
-      const directionDb = loveLuckDb.encounterDirections as Record<string, { direction: string; luckyItems: string; actionGuideline: string }>;
-      if (directionDb[spouseZhi]) {
-        directionGuide = {
-          zhi: spouseZhi,
-          direction: directionDb[spouseZhi].direction,
-          luckyItems: directionDb[spouseZhi].luckyItems,
-          actionGuideline: directionDb[spouseZhi].actionGuideline
-        };
-      }
-    }
   }
 
   return {
@@ -877,8 +855,7 @@ function extractLoveLuck(configs: LoveConfigs,
     monthlyFlowStartMonth: getCurrentKoreanMonth(),
     requiredMonthlyFlowMonths: getMonthlyFlowRequiredMonths(),
     monthlyFlow,
-    unconsciousNeeds,
-    directionGuide
+    unconsciousNeeds
   };
 }
 
@@ -1033,12 +1010,6 @@ function translateDatingDatabaseMatches(matches: DatingDatabaseMatches): DatingD
         deficiencyType: matches.loveLuck.unconsciousNeeds.deficiencyType,
         innerChildDescription: sanitizeTerminology(matches.loveLuck.unconsciousNeeds.innerChildDescription),
         solution: sanitizeTerminology(matches.loveLuck.unconsciousNeeds.solution),
-      } : null,
-      directionGuide: matches.loveLuck.directionGuide ? {
-        zhi: matches.loveLuck.directionGuide.zhi,
-        direction: matches.loveLuck.directionGuide.direction,
-        luckyItems: sanitizeTerminology(matches.loveLuck.directionGuide.luckyItems),
-        actionGuideline: sanitizeTerminology(matches.loveLuck.directionGuide.actionGuideline),
       } : null,
     }
   };

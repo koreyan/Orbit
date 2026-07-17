@@ -14,6 +14,7 @@ import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prom
 import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { buildGenericReportUserMessageJson } from "@/lib/reports/build-generic-report-user-message";
+import { cleanMarkdown, stripLoveTipSection } from "@/lib/reports/report-markdown";
 import OpenAI from "openai";
 import { createChart, calculateLiunian } from "@orrery/core/ziwei";
 
@@ -474,26 +475,16 @@ ${monthlyInfo}
 - 특히 **\`loveLuck.unconsciousNeeds\`(복덕궁 기반 무의식 결핍) 데이터를 적극 반영**하여, 유저가 무의식적으로 지니고 있는 \"내면의 어린아이(결핍 유형 및 무의식적 상처)\"가 관계에서 어떤 집착, 불안, 인정 욕구, 단절 성향 등으로 투사되는지 심층 분석하고, 이를 극복하기 위한 다정한 심리 솔루션을 함께 제시해 주세요.
 
 5. 앞으로 다가올 연애 기회
-아래의 2개 하위 서브섹션 제목을 마크다운 헤더(###)로 선언하여 각 단락을 명확히 구분해 작성해 주세요.
-
-### 5-1. 올해(\${currentYear}년) 연애운
 - \`loveLuck\`의 올해 도화 발현(\`dohwaActivation\`), 방해 요소(\`blockers\`), 경사 조건(\`pregnancyCelebration\`)을 올해(\${currentYear}년)의 연애운 큰 기조로 먼저 간단히 소개합니다. **(주의: 절대로 과거 연도인 2023년 등을 언급하지 마세요. 현재 연도는 \${currentYear}년입니다.)**
 - 이어서 **\`monthlyFlow\` 배열에 포함된 모든 월의 데이터를 표 대신 아래의 개별 박스(인용구 \`>\` 블록) 형식으로 단 하나도 빠뜨리지 말고 전부 출력**해 주세요. 분량이 많다고 해서 임의로 특정 월을 건너뛰거나 요약하는 것을 절대 금지합니다.
 - **[경고 - 실제 월번호 출력 및 왜곡 금지]**: 반드시 전달된 JSON 데이터의 \`loveLuck.requiredMonthlyFlowMonths\`에 있는 **모든 월(현재 한국 시간 기준 월을 포함해 12월까지)**에 대해 각각의 개별 박스 카드를 1:1 매칭하여 출력해야 합니다. 현재 월이 7월이면 첫 박스는 반드시 7월이어야 하며, "이미 진행 중인 달"이라는 이유로 8월부터 시작하면 안 됩니다. 첫 번째 항목이라고 해서 임의로 1월로 변환하거나, 데이터가 부족(null)하다고 특정 달(예: 7월, 11월, 12월 등)을 빼먹는 행위를 절대 금지합니다.
 - **[중요 - 데이터가 null일 때의 처리]**: 만약 특정 월의 \`dohwaActivation\`, \`blocker\`, \`encounterPath\` 데이터가 \`null\`이거나 부족하더라도 **절대 해당 월을 건너뛰지 마세요**. 대신 해당 월의 기본 궁위(\`palaceLabel\`)와 배정된 별(\`stars\`)의 기운을 바탕으로 "무난하고 평탄한 연애운" 또는 "연애보다는 자기 관리에 집중하기 좋은 시기" 등으로 자연스럽게 내용을 창작하여 반드시 박스를 채워야 합니다.
-- **[핵심 작성 지침 - 상세화]**: 각 항목은 절대 흐리멍덩하거나 짧은 요약으로 때우지 말고 아래 지침에 맞게 아주 구체적으로 채워야 합니다:
-  1. **만남 확률 & 기류**: 도화성 활성화 강도와 살성/방해 요소를 융합하여 그 달의 만남 강도와 기류(예: 번개같이 불탔다가 식음, 썸 지연 등) 진단. 데이터가 없으면 평탄한 시기로 해석.
-  2. **나의 매력 어필 포인트**: 유저의 매력 자산(\`charmAssets\`)과 도화성을 결합하여 그 달에 상대의 마음을 흔들 수 있는 **외적 스타일, 제스처, 말투 및 행동 팁** 서술.
-  3. **구체적인 만남 경로 및 장소**: 만남 경로 데이터와 중첩 궁위의 의미(예: 교우궁 = 친구 모임, 천이궁 = 여행 등)를 매치하여 **어떤 씬(Scene)에서 인연이 닿는지** 묘사. 데이터가 없으면 일상적인 장소로 해석.
 
 **[박스 작성 템플릿(반드시 이 형식으로 출력할 것)]**:
 > **{실제 월}월**
 > * **만남 확률 & 기류**: (만남의 가능성과 연애 기류 진단)
-> * **나의 매력 어필 포인트**: (그 달에 뽐내야 할 구체적 매력 스타일 및 플러팅 행동 팁)
+> * **나의 매력 어필 포인트**: (그 달에 드러나는 구체적 매력 스타일과 플러팅 분위기)
 > * **만남 경로**: (인연을 마주하게 될 구체적 장소 및 만남의 경로 서술)
-
-### 5-2. 연애 팁 (개운 처방전)
-- \`loveLuck.directionGuide\` 데이터를 바탕으로 올해 좋은 인연의 에너지가 강하게 맺히는 구체적인 **인연의 방위**, 매력도를 자극하는 **럭키 아이템**, 그리고 그 방위로 향하는 실천적인 **행동 지침(가이드라인)**을 흥미롭고 실용적인 처방전 형태로 다정하게 마무리해 주세요. 만약 데이터가 존재하지 않는다면 이 5-2 서브섹션은 완전히 생략합니다.
 
 [문체]
 - 전체 리포트는 **"친근하고 다정다감한 존댓말 말투(~해요, ~랍니다, ~죠, ~해보세요)"**로 작성합니다. 지나치게 딱딱한 문체가 아닌, 따뜻하고 부드럽게 감정을 보듬어주는 어조를 유지해 주세요.
@@ -635,18 +626,10 @@ ${commonRules}`
       console.log("[OBIT DEBUG 11] OpenAI response received. Length:", responseText.length);
 
       if (theme === 'career' || theme === 'love') {
-        let cleanedMarkdown = responseText.trim();
-        if (cleanedMarkdown.startsWith("```markdown")) {
-          cleanedMarkdown = cleanedMarkdown.substring("```markdown".length).trim();
-        } else if (cleanedMarkdown.startsWith("```")) {
-          cleanedMarkdown = cleanedMarkdown.substring("```".length).trim();
-        }
-        if (cleanedMarkdown.endsWith("```")) {
-          cleanedMarkdown = cleanedMarkdown.substring(0, cleanedMarkdown.length - "```".length).trim();
-        }
-        // 연애 테마: 후처리로 누출된 전문용어를 병기 형태로 치환
+        let cleanedMarkdown = cleanMarkdown(responseText);
+        // 연애 테마: 후처리로 누출된 전문용어를 병기 형태로 치환하고, 5-2 연애 팁 섹션을 저장 전에 제거
         if (theme === 'love') {
-          cleanedMarkdown = sanitizeTerminology(cleanedMarkdown);
+          cleanedMarkdown = stripLoveTipSection(sanitizeTerminology(cleanedMarkdown)).markdown;
         }
         parsedContent = { markdown: cleanedMarkdown };
       } else {

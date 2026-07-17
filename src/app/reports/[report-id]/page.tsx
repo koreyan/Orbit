@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getMyeongban } from "@/lib/myeongban/get-myeongban";
+import { parseOrderSajuData } from "@/lib/orders/order-saju-data";
+import { ReportMyeongbanSection } from "./report-myeongban-section";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +30,10 @@ export default async function ReportDetailPage({
   const reportId = resolvedParams["report-id"];
   const theme = (resolvedSearchParams.theme as string) || "career";
 
-  const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-  const adminClient = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminClient = createSupabaseAdminClient();
+
+  const { data: currentUserData } = await supabase.auth.getUser();
+  const currentUserId = currentUserData.user?.id ?? null;
 
   const orderId = reportId;
 
@@ -59,7 +62,7 @@ export default async function ReportDetailPage({
   // (orders 테이블 RLS 무한참조를 끊기 위한 안전망)
   const { data: order } = await adminClient
     .from("orders")
-    .select("theme")
+    .select("theme, user_id, saju_data")
     .eq("id", orderId)
     .single();
 
@@ -81,6 +84,12 @@ export default async function ReportDetailPage({
   }
 
   const actualTheme = order?.theme || theme;
+  const isOwner = Boolean(currentUserId && order.user_id === currentUserId);
+  const orderSajuData = isOwner ? parseOrderSajuData(order.saju_data) : null;
+  const ownerMyeongban = orderSajuData ? await getMyeongban(orderSajuData).catch((error) => {
+    console.warn("Failed to generate owner report myeongban:", error);
+    return null;
+  }) : null;
 
   const reportStatus = report ? report.status : "pending";
   const reportContent = report?.content || null;
@@ -91,6 +100,12 @@ export default async function ReportDetailPage({
       <BackButton />
       
       <div className="relative z-10 w-full">
+        {ownerMyeongban && (
+          <ReportMyeongbanSection
+            chartData={ownerMyeongban.chartData}
+            interpretation={ownerMyeongban.interpretation}
+          />
+        )}
         <ReportContent 
           reportId={orderId} 
           theme={actualTheme} 

@@ -164,6 +164,9 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.systemPrompt).not.toContain('LOVE_ADVICE_RULES');
     expect(logData.systemPrompt).not.toContain('연애 조언 생성 파이프라인');
     expect(logData.systemPrompt).not.toContain('조언 후처리');
+    expect(logData.systemPrompt).not.toContain('5-2');
+    expect(logData.systemPrompt).not.toContain('개운 처방전');
+    expect(logData.systemPrompt).not.toContain('directionGuide');
     expect(logData.systemPrompt).not.toContain('성별 본질론');
     expect(logData.systemPrompt).not.toContain('정복');
     expect(logData.systemPrompt).not.toContain('소유');
@@ -197,6 +200,8 @@ test.describe.serial('AI Prompt Generation & Jargon-Free E2E', () => {
     expect(logData.userContext).not.toContain('source_excerpt');
     expect(logData.userContext).not.toContain('sourceBook');
     expect(logData.userContext).not.toContain('[CHARM_ACTION_RULES]');
+    expect(logData.userContext).not.toContain('directionGuide');
+    expect(logData.loveUserMessageJson.datingDatabaseMatches.loveLuck).not.toHaveProperty('directionGuide');
   });
 
   test('여가(hobby) 테마 프롬프트 분기 및 검증', async ({ page }) => {

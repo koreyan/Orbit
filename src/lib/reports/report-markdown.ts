@@ -3,6 +3,11 @@ export interface MarkdownSection {
   body: string;
 }
 
+export interface StripSectionResult {
+  markdown: string;
+  removed: boolean;
+}
+
 export const cleanMarkdown = (text?: string): string => {
   if (!text) return "";
   let cleaned = text.trim();
@@ -15,6 +20,39 @@ export const cleanMarkdown = (text?: string): string => {
     cleaned = cleaned.substring(0, cleaned.length - "```".length).trim();
   }
   return cleaned;
+};
+
+export const stripLoveTipSection = (markdown: string): StripSectionResult => {
+  const sectionHeadingPattern = /^(#{1,6})\s*5-2\s*\.?\s*연애\s*팁(?:\s*\([^)]*\))?\s*$/gim;
+  const match = sectionHeadingPattern.exec(markdown);
+
+  if (!match) {
+    return { markdown, removed: false };
+  }
+
+  const headingLevel = match[1].length;
+  const sectionStart = match.index;
+  const afterHeading = sectionStart + match[0].length;
+  const rest = markdown.slice(afterHeading);
+  const nextHeadingPattern = /^(#{1,6})\s+.+$/gm;
+  let sectionEnd = markdown.length;
+  let nextMatch: RegExpExecArray | null;
+
+  while ((nextMatch = nextHeadingPattern.exec(rest)) !== null) {
+    if (nextMatch[1].length <= headingLevel) {
+      sectionEnd = afterHeading + nextMatch.index;
+      break;
+    }
+  }
+
+  const nextSection = markdown.slice(sectionEnd).replace(/^\n+/, "");
+  const previousSection = markdown.slice(0, sectionStart).replace(/\n+$/, "");
+  const stripped = [previousSection, nextSection].filter(Boolean).join("\n\n");
+
+  return {
+    markdown: stripped,
+    removed: true,
+  };
 };
 
 export const splitMarkdownSections = (markdown: string): MarkdownSection[] => {

@@ -43,9 +43,8 @@ test.describe('Reports Page E2E Tests', () => {
     expect(page.url()).toContain('/login');
   });
 
-  test('공유하기 브라우저 호환성 (폴백 동작 검증)', async ({ page, context }) => {
-    // 데스크톱 Playwright 환경(Chromium 등)에서는 기본적으로 navigator.share를 지원하지 않거나 권한이 막혀있어 
-    // Fallback(클립보드 복사) 모드가 작동해야 함.
+  test('링크 복사 공유 동작 검증', async ({ page, context }) => {
+    // Web Share 버튼은 제거되었고 링크 복사 공유만 유지한다.
 
     // 로그인 세션 쿠키 주입
     await context.addCookies([
@@ -62,12 +61,11 @@ test.describe('Reports Page E2E Tests', () => {
 
     await page.goto('/reports/ORDER_1700000001?theme=career');
 
-    const shareBtn = page.getByRole('button', { name: '외부로 공유하기' });
-    // 외부로 공유하기 버튼 클릭 시도
-    await shareBtn.click();
+    const copyBtn = page.getByRole('button', { name: '링크 복사하기' });
+    await expect(page.getByRole('button', { name: '외부로 공유하기' })).toHaveCount(0);
+    await copyBtn.click();
 
-    // (navigator.share가 없어서 handleCopyLink가 호출되면) '링크 복사하기' 버튼이 '링크 복사 완료'로 잠시 텍스트 변경되는지 확인
-    // 실제 Fallback이 실행되었다는 증거임
+    // 링크 복사가 실행되면 '링크 복사하기' 버튼이 '링크 복사 완료'로 잠시 텍스트 변경되는지 확인
     await expect(page.locator('text=링크 복사 완료')).toBeVisible();
 
     // 일정 시간(2초) 후 다시 원상복구 되는지 검증
