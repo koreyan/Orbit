@@ -38,6 +38,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Coding Conventions
 
 - 모든 컴포넌트는 `const` + 화살표 함수로 작성한다.
+- 단, `src/components/ui/`의 Shadcn/Base UI 기본 컴포넌트는 생성 원본 갱신 가능성을 위해 화살표 함수 강제 규칙에서 제외한다.
 - 파일명과 폴더명은 `kebab-case`를 사용한다.
 - `use client`는 꼭 필요한 컴포넌트에만 선언한다.
 - 주석과 사용자-facing 문구는 한국어를 기본으로 한다.
@@ -57,10 +58,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 현재 기본 확인 명령:
 - `npm run lint`
+- `npm run typecheck`
+- `npm run test:unit`
 - `npm run build`
 
 추가 표준화된 명령:
-- `npm run typecheck`
 - `npm run verify`
 - 필요 시 `npm run test:e2e`
 

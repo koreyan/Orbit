@@ -3,12 +3,14 @@ import type { ExtractedChart, ExtractedPalace } from "@/lib/ziwei-extractor";
 // JSON 데이터베이스 로드
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+type LoveConfigData = Record<string, unknown>;
+
 export interface LoveConfigs {
-  idealTypesDb: any;
-  relationshipStylesDb: any;
-  charmAssetsDb: any;
-  relationshipProblemsDb: any;
-  loveLuckDb: any;
+  idealTypesDb: LoveConfigData;
+  relationshipStylesDb: LoveConfigData;
+  charmAssetsDb: LoveConfigData;
+  relationshipProblemsDb: LoveConfigData;
+  loveLuckDb: LoveConfigData;
 }
 
 export async function loadLoveConfigs(supabase: SupabaseClient): Promise<LoveConfigs> {
@@ -18,7 +20,7 @@ export async function loadLoveConfigs(supabase: SupabaseClient): Promise<LoveCon
   const map = data.reduce((acc, row) => {
     acc[row.id] = row.config_data;
     return acc;
-  }, {} as Record<string, any>);
+  }, {} as Record<string, LoveConfigData>);
 
   return {
     idealTypesDb: map['ideal_types'] || {},
@@ -328,16 +330,17 @@ function extractIdealTypes(configs: LoveConfigs, extractedStars: ExtractedChart,
 
   // 1-4. 공궁 규칙 (gongGungRules)
   const gongGungRules: GongGungRule[] = [];
+  const gongGungRulesSource = idealTypesDb.gongGungRules as Record<string, GongGungRule["rule"]>;
   if (spousePalace?.borrowed) {
     gongGungRules.push({
       palace: "부처궁",
-      rule: idealTypesDb.gongGungRules["부처궁_공궁"],
+      rule: gongGungRulesSource["부처궁_공궁"],
     });
   }
   if (careerPalace?.borrowed) {
     gongGungRules.push({
       palace: "관록궁",
-      rule: idealTypesDb.gongGungRules["관록궁_공궁"],
+      rule: gongGungRulesSource["관록궁_공궁"],
     });
   }
 
@@ -405,11 +408,12 @@ function extractRelationshipStyles(configs: LoveConfigs, extractedStars: Extract
 
       const star1Polarity = (idealTypesDb.starPolarities as Record<string, { polarity: string }>)[starNames[0]]?.polarity;
       const star2Polarity = (idealTypesDb.starPolarities as Record<string, { polarity: string }>)[starNames[1]]?.polarity;
+      const doubleStarSynthesisSource = relationshipStylesDb.doubleStarSynthesis as { synergy: string; clash: string };
       if (star1Polarity && star2Polarity) {
         if (star1Polarity === star2Polarity) {
-          doubleStarSynthesis = { type: "synergy", text: relationshipStylesDb.doubleStarSynthesis.synergy };
+          doubleStarSynthesis = { type: "synergy", text: doubleStarSynthesisSource.synergy };
         } else {
-          doubleStarSynthesis = { type: "clash", text: relationshipStylesDb.doubleStarSynthesis.clash };
+          doubleStarSynthesis = { type: "clash", text: doubleStarSynthesisSource.clash };
         }
       }
     } else {
@@ -574,6 +578,8 @@ function extractRelationshipProblems(configs: LoveConfigs, extractedStars: Extra
   const hwaGis: HwaGiDeficiencyMatch[] = [];
   const synergiesList: SynergyMatch[] = [];
   let flyOutProblem: { phenomenon: string; mechanism: string; solution: string } | null = null;
+  const hwaGiFallback = relationshipProblemsDb.commonHwaGiFallback as { definition: string };
+  const flyOutProblems = relationshipProblemsDb.flyOutProblems as Record<string, { phenomenon: string; mechanism: string; solution: string }>;
 
   const palacesToScan = [
     { palace: spousePalace, label: "부처궁" },
@@ -620,7 +626,7 @@ function extractRelationshipProblems(configs: LoveConfigs, extractedStars: Extra
             key,
             deficiencyType: "공통 화기 결핍",
             behavior: `${s.name}의 고유 기질에 화기의 결핍 작용이 발생합니다.`,
-            selfAche: relationshipProblemsDb.commonHwaGiFallback.definition,
+            selfAche: hwaGiFallback.definition,
           });
         }
 
@@ -641,7 +647,7 @@ function extractRelationshipProblems(configs: LoveConfigs, extractedStars: Extra
   if (noboPalace && spousePalace) {
     const hasSpouseHwaGi = spousePalace.majorStars.some((s) => s.sihua === "화기");
     if (hasSpouseHwaGi) {
-      flyOutProblem = relationshipProblemsDb.flyOutProblems["노복궁_화기_입_부처궁"];
+      flyOutProblem = flyOutProblems["노복궁_화기_입_부처궁"];
     }
   }
 
@@ -685,6 +691,9 @@ function extractLoveLuck(configs: LoveConfigs,
   let unconsciousNeeds: UnconsciousNeedMatch | null = null;
   let directionGuide: EncounterDirectionGuide | null = null;
 
+  const dohwaActivationSource = loveLuckDb.dohwaActivation as Record<string, Omit<DohwaActivationMatch, "starName">>;
+  const encounterPathsSource = loveLuckDb.encounterPaths as Record<string, { pathDescription: string }>;
+  const pregnancyCelebrationSource = loveLuckDb.pregnancyCelebration as { condition: string; manifestation: string };
   const dohwaStars = ["홍란", "천희", "천요", "함지", "대모", "소모", "태음", "탐랑", "천동"];
   const salStars = ["경양", "타라", "화성", "영성", "지공", "지겁"];
 
@@ -760,12 +769,12 @@ function extractLoveLuck(configs: LoveConfigs,
     }
 
     if (matchedDohwaStar) {
-      const dbEntry = (loveLuckDb.dohwaActivation as Record<string, Omit<DohwaActivationMatch, "starName">>)[matchedDohwaStar];
+      const dbEntry = dohwaActivationSource[matchedDohwaStar];
       if (dbEntry) {
         dohwaActivation = { starName: matchedDohwaStar, ...dbEntry };
       }
     } else {
-      dohwaActivation = { starName: "홍란", ...loveLuckDb.dohwaActivation["홍란"] };
+      dohwaActivation = { starName: "홍란", ...dohwaActivationSource["홍란"] };
     }
 
     if (matchedBlockerStar) {
@@ -775,7 +784,7 @@ function extractLoveLuck(configs: LoveConfigs,
       }
     }
 
-    encounterPath = loveLuckDb.encounterPaths["노복궁"];
+    encounterPath = encounterPathsSource["노복궁"];
     
     const hasCelebrationSignal = Object.values(extractedStars).some((palace) => {
       if (!palace) return false;
@@ -787,8 +796,8 @@ function extractLoveLuck(configs: LoveConfigs,
 
     if (hasCelebrationSignal) {
       pregnancyCelebration = {
-        condition: loveLuckDb.pregnancyCelebration.condition,
-        manifestation: loveLuckDb.pregnancyCelebration.manifestation,
+        condition: pregnancyCelebrationSource.condition,
+        manifestation: pregnancyCelebrationSource.manifestation,
       };
     }
 

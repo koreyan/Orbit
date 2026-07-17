@@ -1,6 +1,75 @@
 "use server";
 
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getProductByTheme, isFreeDemoPaymentAllowed } from "@/lib/products/catalog";
+import { classifyPaymentKey } from "@/lib/payments/payment-policy";
 import { sendTelegramNotification } from "@/lib/telegram";
+
+interface OrderPaymentSnapshot {
+  theme: string;
+  amount: number;
+}
+
+interface TossPaymentData {
+  totalAmount: number;
+  method: string;
+  status: string;
+  approvedAt?: string;
+  message?: string;
+  code?: string;
+}
+
+const createAdminClient = () => {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
+
+const normalizeTossResponse = (value: unknown): TossPaymentData => {
+  if (typeof value !== "object" || value === null) {
+    return { totalAmount: 0, method: "알 수 없음", status: "unknown", message: String(value) };
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    totalAmount: typeof record.totalAmount === "number" ? record.totalAmount : 0,
+    method: typeof record.method === "string" ? record.method : "알 수 없음",
+    status: typeof record.status === "string" ? record.status : "unknown",
+    approvedAt: typeof record.approvedAt === "string" ? record.approvedAt : undefined,
+    message: typeof record.message === "string" ? record.message : undefined,
+    code: typeof record.code === "string" ? record.code : undefined,
+  };
+};
+
+const getOrderPaymentSnapshot = async (orderId: string): Promise<OrderPaymentSnapshot> => {
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient
+    .from("orders")
+    .select("theme, amount")
+    .eq("id", orderId)
+    .single();
+
+  if (error || !data) {
+    throw new Error("주문 정보를 찾을 수 없습니다.");
+  }
+
+  return {
+    theme: String(data.theme),
+    amount: Number(data.amount),
+  };
+};
+
+const assertPaymentAmount = (order: OrderPaymentSnapshot, amount: number) => {
+  const product = getProductByTheme(order.theme);
+
+  if (order.amount !== product.amount || amount !== product.amount) {
+    throw new Error("주문 금액이 서버 상품표와 일치하지 않습니다.");
+  }
+
+  return product;
+};
 
 export async function confirmPaymentAction(params: {
   paymentKey: string;
@@ -13,17 +82,22 @@ export async function confirmPaymentAction(params: {
     throw new Error("결제 승인에 필요한 파라미터가 누락되었습니다.");
   }
 
-  if (paymentKey.startsWith("free_")) {
-    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-    const adminClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  const order = await getOrderPaymentSnapshot(orderId);
+  const product = assertPaymentAmount(order, amount);
+  const paymentKeyKind = classifyPaymentKey({
+    paymentKey,
+    nodeEnv: process.env.NODE_ENV,
+    isFreeDemoOrder: isFreeDemoPaymentAllowed(product),
+  });
+  const adminClient = createAdminClient();
 
+  if (paymentKeyKind === "free-demo") {
     const { error: orderError } = await adminClient
       .from("orders")
       .update({ status: "paid", updated_at: new Date().toISOString() })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .eq("theme", product.theme)
+      .eq("amount", product.amount);
 
     if (orderError) {
       console.error("Free order update failed:", orderError);
@@ -48,13 +122,7 @@ export async function confirmPaymentAction(params: {
     return { success: true, paymentData: { totalAmount: 0, method: "무료결제", status: "DONE" } };
   }
 
-  // E2E 테스트용 mock 결제 우회
-  if (paymentKey.startsWith("mock_")) {
-    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-    const adminClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  if (paymentKeyKind === "test-mock") {
     const { error: updateError } = await adminClient
       .from("orders")
       .update({ status: "paid" })
@@ -75,76 +143,57 @@ export async function confirmPaymentAction(params: {
 
   const encryptedSecretKey = Buffer.from(`${secretKey}:`).toString("base64");
 
-  // E2E 테스트를 위한 Mock 처리 분기
-  let paymentData;
-  if (paymentKey === "E2E_TEST_MOCK_PAYMENT_KEY") {
-    paymentData = {
-      totalAmount: amount,
-      method: "가상계좌",
-      status: "DONE",
-      approvedAt: new Date().toISOString(),
-    };
-  } else {
-    // 1. Toss Payments 결제 승인 API 호출
-    const response = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${encryptedSecretKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        paymentKey,
-        orderId,
-        amount,
-      }),
-    });
+  const response = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${encryptedSecretKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      paymentKey,
+      orderId,
+      amount,
+    }),
+  });
 
-    const responseText = await response.text();
-    try {
-      paymentData = JSON.parse(responseText);
-    } catch {
-      paymentData = { message: responseText || `HTTP status ${response.status}` };
-    }
-
-    if (!response.ok) {
-      console.error("Toss Payment Confirm Error:", JSON.stringify(paymentData, null, 2));
-      
-      const isAlreadyProcessed = 
-        paymentData.code === "ALREADY_PROCESSED_PAYMENT" || 
-        (paymentData.message && paymentData.message.includes("이미 처리된"));
-
-      if (!isAlreadyProcessed) {
-        // 텔레그램 알림: 결제 승인 실패
-        await sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
-        throw new Error(paymentData.message || `결제 승인 중 오류가 발생했습니다. (상태코드: ${response.status})`);
-      } else {
-        console.log("이미 승인된 토스 결제입니다. DB 업데이트 로직으로 넘어갑니다.");
-        // 에러를 던지지 않고 무시하여, 아래의 DB status 업데이트 로직으로 넘어가게 합니다.
-      }
-    }
+  const responseText = await response.text();
+  let paymentData: TossPaymentData;
+  try {
+    paymentData = normalizeTossResponse(JSON.parse(responseText));
+  } catch {
+    paymentData = { totalAmount: 0, method: "알 수 없음", status: "unknown", message: responseText || `HTTP status ${response.status}` };
   }
 
-  // 2. 결제 승인 성공 시 DB 업데이트
-  // Toss 결제 후 쿠키 유실(SameSite 이슈) 대비 및 안전한 백엔드 처리를 위해 Admin 권한 사용
-  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-  const supabase = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  if (!response.ok) {
+    console.error("Toss Payment Confirm Error:", JSON.stringify(paymentData, null, 2));
 
-  // (1) orders 테이블 상태 변경
-  const { error: orderError } = await supabase
+    const isAlreadyProcessed =
+      paymentData.code === "ALREADY_PROCESSED_PAYMENT" ||
+      (paymentData.message && paymentData.message.includes("이미 처리된"));
+
+    if (!isAlreadyProcessed) {
+      await sendTelegramNotification(`🚨 <b>[결제 실패]</b>\n주문번호: <code>${orderId}</code>\n금액: ${amount}원\n사유: ${paymentData.message || "알 수 없는 오류"}`);
+      throw new Error(paymentData.message || `결제 승인 중 오류가 발생했습니다. (상태코드: ${response.status})`);
+    }
+
+    console.log("이미 승인된 토스 결제입니다. DB 업데이트 로직으로 넘어갑니다.");
+  }
+
+  if (paymentData.totalAmount !== product.amount) {
+    throw new Error("토스 승인 금액이 서버 상품표와 일치하지 않습니다.");
+  }
+
+  const { error: orderError } = await adminClient
     .from("orders")
     .update({ status: "paid", updated_at: new Date().toISOString() })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .eq("amount", product.amount);
 
   if (orderError) {
     console.error("Failed to update order status:", orderError);
-    // Toss 결제 취소 API를 호출해야 할 수도 있지만, 일단 로그만 남김
   }
 
-  // (2) payments 테이블 인서트
-  const { error: paymentError } = await supabase
+  const { error: paymentError } = await adminClient
     .from("payments")
     .insert({
       order_id: orderId,
@@ -159,10 +208,7 @@ export async function confirmPaymentAction(params: {
     console.error("Failed to insert payment record:", JSON.stringify(paymentError));
   }
 
-  // 텔레그램 알림: 결제 성공
   await sendTelegramNotification(`✅ <b>[결제 성공]</b>\n주문번호: <code>${orderId}</code>\n금액: ${paymentData.totalAmount}원\n수단: ${paymentData.method}`);
-
-  // 백그라운드 리포트 생성 트리거 제거 (Vercel Serverless Function 생명주기 문제로 인해 클라이언트에서 직접 호출하도록 변경)
 
   return { success: true, paymentData };
 }
