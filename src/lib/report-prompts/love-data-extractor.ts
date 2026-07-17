@@ -1,4 +1,5 @@
 import type { ExtractedChart, ExtractedPalace } from "@/lib/ziwei-extractor";
+import { getCurrentKoreanMonth, getMonthlyFlowMonths, getMonthlyFlowRequiredMonths } from "./love-month-flow";
 
 // JSON 데이터베이스 로드
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -220,6 +221,8 @@ export interface LoveLuckMatchResult {
   blocker: { starName: string; effect: string } | null;
   encounterPath: { pathDescription: string } | null;
   pregnancyCelebration: { condition: string; manifestation: string } | null;
+  monthlyFlowStartMonth: number;
+  requiredMonthlyFlowMonths: number[];
   monthlyFlow: MonthlyFlowEntry[];
   unconsciousNeeds: UnconsciousNeedMatch | null;
   directionGuide: EncounterDirectionGuide | null;
@@ -802,8 +805,8 @@ function extractLoveLuck(configs: LoveConfigs,
     }
 
     // 월별 연애운 흐름 추출 (현재 월 ~ 12월)
-    const currentMonth = new Date().getMonth() + 1;
-    const filteredMonths = liunian.liuyue.filter((ly) => ly.month >= currentMonth);
+    const currentMonth = getCurrentKoreanMonth();
+    const filteredMonths = getMonthlyFlowMonths({ liuyue: liunian.liuyue, currentMonth });
 
     filteredMonths.forEach((ly) => {
       const palaceLabel = PALACE_NAME_TO_LABEL[ly.natalPalaceName] ?? ly.natalPalaceName;
@@ -871,6 +874,8 @@ function extractLoveLuck(configs: LoveConfigs,
     blocker,
     encounterPath,
     pregnancyCelebration,
+    monthlyFlowStartMonth: getCurrentKoreanMonth(),
+    requiredMonthlyFlowMonths: getMonthlyFlowRequiredMonths(),
     monthlyFlow,
     unconsciousNeeds,
     directionGuide
@@ -1004,6 +1009,8 @@ function translateDatingDatabaseMatches(matches: DatingDatabaseMatches): DatingD
         condition: sanitizeTerminology(matches.loveLuck.pregnancyCelebration.condition),
         manifestation: sanitizeTerminology(matches.loveLuck.pregnancyCelebration.manifestation),
       } : null,
+      monthlyFlowStartMonth: matches.loveLuck.monthlyFlowStartMonth,
+      requiredMonthlyFlowMonths: matches.loveLuck.requiredMonthlyFlowMonths,
       monthlyFlow: matches.loveLuck.monthlyFlow.map(m => ({
         month: m.month,
         palaceLabel: translatePalace(m.palaceLabel),

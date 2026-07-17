@@ -9,6 +9,7 @@ import { getOpenAiApiKey } from "@/lib/env/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { fetchKnowledgeBaseForStars } from "@/lib/knowledge-base";
 import { buildLoveUserMessageJson } from "@/lib/report-prompts/love-context";
+import { getCurrentKoreanMonth, getMonthlyFlowMonths } from "@/lib/report-prompts/love-month-flow";
 import { extractDatingDatabaseMatches, loadLoveConfigs } from "@/lib/report-prompts/love-data-extractor";
 import { sanitizeTerminology } from "@/lib/report-prompts/term-translator";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -210,8 +211,8 @@ export async function generateReportAction(orderId: string) {
       const yearlyInfo = `- ${currentYear}년 전체 (만 ${currentYear - y}세) - 현재 대운(${yearlyLiunian.daxianAgeStart}~${yearlyLiunian.daxianAgeEnd}세) 구간. 올해의 중심 에너지: ${mingPalaceInfo}\n`;
 
       // 현재 월부터 12월까지의 월별 운세 상세 분석
-      const currentMonth = new Date().getMonth() + 1;
-      const filteredMonths = yearlyLiunian.liuyue.filter((ly) => ly.month >= currentMonth);
+      const currentMonth = getCurrentKoreanMonth();
+      const filteredMonths = getMonthlyFlowMonths({ liuyue: yearlyLiunian.liuyue, currentMonth });
       
       let monthlyInfo = "";
       filteredMonths.forEach((ly) => {
@@ -478,7 +479,7 @@ ${monthlyInfo}
 ### 5-1. 올해(\${currentYear}년) 연애운
 - \`loveLuck\`의 올해 도화 발현(\`dohwaActivation\`), 방해 요소(\`blockers\`), 경사 조건(\`pregnancyCelebration\`)을 올해(\${currentYear}년)의 연애운 큰 기조로 먼저 간단히 소개합니다. **(주의: 절대로 과거 연도인 2023년 등을 언급하지 마세요. 현재 연도는 \${currentYear}년입니다.)**
 - 이어서 **\`monthlyFlow\` 배열에 포함된 모든 월의 데이터를 표 대신 아래의 개별 박스(인용구 \`>\` 블록) 형식으로 단 하나도 빠뜨리지 말고 전부 출력**해 주세요. 분량이 많다고 해서 임의로 특정 월을 건너뛰거나 요약하는 것을 절대 금지합니다.
-- **[경고 - 실제 월번호 출력 및 왜곡 금지]**: 반드시 전달된 JSON 데이터에 있는 **모든 월(예: \${new Date().getMonth() + 1}월부터 12월까지 하나도 빠짐없이)**에 대해 각각의 개별 박스 카드를 1:1 매칭하여 출력해야 합니다. 첫 번째 항목이라고 해서 임의로 1월로 변환하거나, 데이터가 부족(null)하다고 특정 달(예: 7월, 11월, 12월 등)을 빼먹는 행위를 절대 금지합니다.
+- **[경고 - 실제 월번호 출력 및 왜곡 금지]**: 반드시 전달된 JSON 데이터의 \`loveLuck.requiredMonthlyFlowMonths\`에 있는 **모든 월(현재 한국 시간 기준 월을 포함해 12월까지)**에 대해 각각의 개별 박스 카드를 1:1 매칭하여 출력해야 합니다. 현재 월이 7월이면 첫 박스는 반드시 7월이어야 하며, "이미 진행 중인 달"이라는 이유로 8월부터 시작하면 안 됩니다. 첫 번째 항목이라고 해서 임의로 1월로 변환하거나, 데이터가 부족(null)하다고 특정 달(예: 7월, 11월, 12월 등)을 빼먹는 행위를 절대 금지합니다.
 - **[중요 - 데이터가 null일 때의 처리]**: 만약 특정 월의 \`dohwaActivation\`, \`blocker\`, \`encounterPath\` 데이터가 \`null\`이거나 부족하더라도 **절대 해당 월을 건너뛰지 마세요**. 대신 해당 월의 기본 궁위(\`palaceLabel\`)와 배정된 별(\`stars\`)의 기운을 바탕으로 "무난하고 평탄한 연애운" 또는 "연애보다는 자기 관리에 집중하기 좋은 시기" 등으로 자연스럽게 내용을 창작하여 반드시 박스를 채워야 합니다.
 - **[핵심 작성 지침 - 상세화]**: 각 항목은 절대 흐리멍덩하거나 짧은 요약으로 때우지 말고 아래 지침에 맞게 아주 구체적으로 채워야 합니다:
   1. **만남 확률 & 기류**: 도화성 활성화 강도와 살성/방해 요소를 융합하여 그 달의 만남 강도와 기류(예: 번개같이 불탔다가 식음, 썸 지연 등) 진단. 데이터가 없으면 평탄한 시기로 해석.
